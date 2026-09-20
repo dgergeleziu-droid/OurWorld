@@ -4,14 +4,11 @@ struct DebugView: View {
     @EnvironmentObject var characterStore: CharacterStore
     @Environment(\.dismiss) var dismiss
 
-    @State private var showAll = false
-
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
 
-                    // 1. Картинки в бандле
                     section(title: "1. Картинки в бандле приложения") {
                         checkImage("anya")
                         checkImage("bedDouble")
@@ -23,7 +20,6 @@ struct DebugView: View {
                         checkImage("apple")
                     }
 
-                    // 2. Персонажи
                     section(title: "2. Персонажи (CharacterStore)") {
                         infoLine("Всего персонажей", "\(characterStore.players.count)")
                         ForEach(characterStore.players) { p in
@@ -42,19 +38,12 @@ struct DebugView: View {
                         }
                     }
 
-                    // 3. Каталог предметов
                     section(title: "3. Каталог предметов") {
                         infoLine("Всего предметов", "\(ItemCatalog.all.count)")
                         let withImage = ItemCatalog.all.filter { $0.imageName != nil }.count
                         infoLine("Из них с картинками", "\(withImage)")
-
-                        if ItemCatalog.all.isEmpty {
-                            Text("⚠️ ItemCatalog.all ПУСТ")
-                                .foregroundColor(.red)
-                        }
                     }
 
-                    // 4. Проверка конкретных предметов
                     section(title: "4. Первые 5 предметов каталога") {
                         ForEach(ItemCatalog.all.prefix(5)) { item in
                             HStack {
@@ -68,7 +57,6 @@ struct DebugView: View {
                         }
                     }
 
-                    // 5. Версия iOS / SDK
                     section(title: "5. Система") {
                         infoLine("iOS", UIDevice.current.systemVersion)
                         infoLine("Устройство", UIDevice.current.model)
@@ -87,7 +75,6 @@ struct DebugView: View {
         }
     }
 
-    // MARK: - Секция
     @ViewBuilder
     func section<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -100,21 +87,21 @@ struct DebugView: View {
         }
     }
 
-    // MARK: - Проверка картинки
     @ViewBuilder
     func checkImage(_ name: String) -> some View {
         HStack {
-            if UIImage(named: name) != nil {
+            if let ui = UIImage(named: name) {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundColor(.green)
                 Text("\(name).png — НАЙДЕНА")
                     .font(.system(size: 13))
                 Spacer()
-                Image(name)
+                Image(uiImage: ui)
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 40, height: 40)
+                    .frame(width: 44, height: 44)
                     .background(Color.gray.opacity(0.1))
+                    .cornerRadius(6)
             } else {
                 Image(systemName: "xmark.circle.fill")
                     .foregroundColor(.red)
@@ -125,16 +112,12 @@ struct DebugView: View {
         }
     }
 
-    // MARK: - Строка с инфо
     @ViewBuilder
     func infoLine(_ title: String, _ value: String) -> some View {
         HStack {
-            Text(title)
-                .font(.system(size: 13))
+            Text(title).font(.system(size: 13))
             Spacer()
-            Text(value)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(.blue)
+            Text(value).font(.system(size: 13, weight: .semibold)).foregroundColor(.blue)
         }
     }
 }
