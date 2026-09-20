@@ -4,6 +4,8 @@ struct WorldMapView: View {
     @EnvironmentObject var characterStore: CharacterStore
     @EnvironmentObject var worldStore: WorldStore
 
+    @State private var cloudsOffset: CGFloat = 0
+
     var body: some View {
         GeometryReader { geo in
             ZStack {
@@ -13,19 +15,23 @@ struct WorldMapView: View {
                     startPoint: .top, endPoint: .bottom
                 ).ignoresSafeArea()
 
-                // Солнце
+                // Солнце с пульсацией
                 Circle()
                     .fill(Color(hex: "#FCD34D"))
                     .frame(width: 90, height: 90)
                     .position(x: geo.size.width - 80, y: 80)
-                    .shadow(color: Color(hex: "#FCD34D").opacity(0.6), radius: 20)
+                    .shadow(color: Color(hex: "#FCD34D").opacity(0.6), radius: 25)
+                    .pulse()
 
-                // Облака
-                CloudShape().position(x: geo.size.width * 0.20, y: 90)
-                CloudShape().scaleEffect(0.7).position(x: geo.size.width * 0.65, y: 120)
-                CloudShape().scaleEffect(0.5).position(x: geo.size.width * 0.90, y: 70)
+                // Облака (плавно плывут)
+                CloudShape()
+                    .position(x: geo.size.width * 0.20 + cloudsOffset, y: 90)
+                CloudShape().scaleEffect(0.7)
+                    .position(x: geo.size.width * 0.65 + cloudsOffset * 0.6, y: 120)
+                CloudShape().scaleEffect(0.5)
+                    .position(x: geo.size.width * 0.90 + cloudsOffset * 0.4, y: 70)
 
-                // Трава (нижняя часть)
+                // Трава
                 Rectangle()
                     .fill(LinearGradient(
                         colors: [Color(hex: "#7BC96F"), Color(hex: "#5BAF50")],
@@ -33,7 +39,7 @@ struct WorldMapView: View {
                     .frame(height: geo.size.height * 0.72)
                     .position(x: geo.size.width / 2, y: geo.size.height * 0.78)
 
-                // Дорожки между зданиями
+                // Дорожки
                 Path { p in
                     p.move(to: CGPoint(x: geo.size.width * 0.20, y: geo.size.height * 0.55))
                     p.addLine(to: CGPoint(x: geo.size.width * 0.50, y: geo.size.height * 0.70))
@@ -42,8 +48,8 @@ struct WorldMapView: View {
                 .stroke(Color(hex: "#C9A96E").opacity(0.7),
                         style: StrokeStyle(lineWidth: 40, lineCap: .round, lineJoin: .round))
 
-                // ===== ЗДАНИЯ (кнопки-локации) =====
-                ForEach(LocationID.allCases) { loc in
+                // ===== ЗДАНИЯ с анимацией появления =====
+                ForEach(Array(LocationID.allCases.enumerated()), id: \.element) { index, loc in
                     NavigationLink {
                         LocationView(location: loc)
                             .environmentObject(characterStore)
@@ -51,11 +57,12 @@ struct WorldMapView: View {
                     } label: {
                         BuildingView(location: loc)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(BounceButtonStyle())
                     .position(
                         x: geo.size.width * loc.mapPosition.x,
                         y: geo.size.height * loc.mapPosition.y
                     )
+                    .staggered(index: index)
                 }
 
                 // Заголовок
@@ -74,6 +81,20 @@ struct WorldMapView: View {
             }
         }
         .navigationBarHidden(true)
+        .onAppear {
+            withAnimation(.linear(duration: 30).repeatForever(autoreverses: true)) {
+                cloudsOffset = 60
+            }
+        }
+    }
+}
+
+// MARK: - Кнопка с пружинкой при нажатии
+struct BounceButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.92 : 1.0)
+            .animation(AppAnimation.tap, value: configuration.isPressed)
     }
 }
 
@@ -89,39 +110,38 @@ struct CloudShape: View {
     }
 }
 
-// MARK: - Здание на карте
+// MARK: - Здание
 struct BuildingView: View {
     let location: LocationID
 
     var body: some View {
         VStack(spacing: 0) {
-            // Крыша
             Triangle()
                 .fill(Color(hex: location.roofColor))
                 .frame(width: 70, height: 26)
                 .shadow(color: .black.opacity(0.15), radius: 3, y: 2)
 
-            // Стены
             ZStack {
                 RoundedRectangle(cornerRadius: 6)
                     .fill(Color(hex: location.wallColor))
                     .frame(width: 68, height: 60)
-                    .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color(hex: location.roofColor).opacity(0.5), lineWidth: 2))
+                    .overlay(RoundedRectangle(cornerRadius: 6)
+                        .stroke(Color(hex: location.roofColor).opacity(0.5), lineWidth: 2))
 
-                // Окошки
                 HStack(spacing: 6) {
                     RoundedRectangle(cornerRadius: 2)
                         .fill(Color(hex: "#87CEEB"))
                         .frame(width: 14, height: 14)
-                        .overlay(RoundedRectangle(cornerRadius: 2).stroke(Color(hex: location.roofColor), lineWidth: 2))
+                        .overlay(RoundedRectangle(cornerRadius: 2)
+                            .stroke(Color(hex: location.roofColor), lineWidth: 2))
                     RoundedRectangle(cornerRadius: 2)
                         .fill(Color(hex: "#87CEEB"))
                         .frame(width: 14, height: 14)
-                        .overlay(RoundedRectangle(cornerRadius: 2).stroke(Color(hex: location.roofColor), lineWidth: 2))
+                        .overlay(RoundedRectangle(cornerRadius: 2)
+                            .stroke(Color(hex: location.roofColor), lineWidth: 2))
                 }
                 .offset(y: -14)
 
-                // Дверь с иконкой
                 ZStack {
                     RoundedRectangle(cornerRadius: 3)
                         .fill(Color(hex: location.roofColor))
@@ -133,7 +153,6 @@ struct BuildingView: View {
                 .offset(y: 12)
             }
 
-            // Подпись
             Text(location.rawValue)
                 .font(.system(size: 12, weight: .bold, design: .rounded))
                 .foregroundColor(Color(hex: "#111827"))
