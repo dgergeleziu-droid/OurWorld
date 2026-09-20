@@ -4,9 +4,13 @@ import Foundation
 class CharacterStore: ObservableObject {
     @Published var players: [Player] = []
 
-    private let playersKey = "ourworld.players.v3"
+    private let playersKey = "ourworld.players.v4"
+    private let didSeedKey = "ourworld.didSeed.v1"
 
-    init() { load() }
+    init() {
+        load()
+        seedDefaultCharacterIfNeeded()
+    }
 
     func add(_ player: Player) {
         players.append(player)
@@ -26,6 +30,24 @@ class CharacterStore: ObservableObject {
         }
         players.removeAll { $0.id == player.id }
         save()
+    }
+
+    private func seedDefaultCharacterIfNeeded() {
+        // Если ещё ни разу не добавляли — создаём Аню
+        let didSeed = UserDefaults.standard.bool(forKey: didSeedKey)
+        guard !didSeed else { return }
+        guard players.isEmpty else {
+            UserDefaults.standard.set(true, forKey: didSeedKey)
+            return
+        }
+
+        let anya = Player(
+            name: "Аня",
+            imageName: "anya"
+        )
+        players.append(anya)
+        save()
+        UserDefaults.standard.set(true, forKey: didSeedKey)
     }
 
     private func save() {
