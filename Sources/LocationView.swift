@@ -171,7 +171,7 @@ struct LocationView: View {
             x: Double(size.width / 2 + CGFloat.random(in: -60...60)),
             y: Double(size.height / 2 + CGFloat.random(in: -80...80))
         )
-        worldStore.addItem(placed, in: location)
+        worldStore.addItem(placed, to: location)
     }
 
     func position(for player: Player, in size: CGSize) -> CGPoint {
