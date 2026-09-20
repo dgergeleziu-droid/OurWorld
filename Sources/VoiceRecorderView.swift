@@ -23,21 +23,20 @@ struct VoiceRecorderView: View {
             ZStack {
                 Color(hex: "#F9FAFB").ignoresSafeArea()
 
-                VStack(spacing: 30) {
+                VStack(spacing: 28) {
                     AvatarView(player: player, size: 140)
                         .padding(.top, 20)
 
                     Text(player.name)
-                        .font(.system(size: 22, weight: .bold))
+                        .font(.system(size: 22, weight: .bold, design: .rounded))
                         .foregroundColor(Color(hex: "#111827"))
 
                     Text("Запиши голос — персонаж будет «говорить» твоим голосом")
-                        .font(.system(size: 13))
+                        .font(.system(size: 13, design: .rounded))
                         .foregroundColor(Color(hex: "#6B7280"))
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 30)
 
-                    // Кнопка записи
                     Button {
                         toggleRecording()
                     } label: {
@@ -60,10 +59,9 @@ struct VoiceRecorderView: View {
                     }
 
                     Text(audio.isRecording ? String(format: "%.1f сек", audio.recordingTime) : "Нажми, чтобы записать")
-                        .font(.system(size: 15, weight: .medium))
+                        .font(.system(size: 15, weight: .medium, design: .rounded))
                         .foregroundColor(Color(hex: "#6B7280"))
 
-                    // Воспроизведение
                     if savedFileName != nil && !audio.isRecording {
                         Button {
                             if let name = savedFileName {
@@ -71,7 +69,7 @@ struct VoiceRecorderView: View {
                             }
                         } label: {
                             Label("Прослушать", systemImage: "play.circle.fill")
-                                .font(.system(size: 15, weight: .semibold))
+                                .font(.system(size: 15, weight: .semibold, design: .rounded))
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 20).padding(.vertical, 12)
                                 .background(Color(hex: "#22C55E"))
@@ -81,7 +79,7 @@ struct VoiceRecorderView: View {
 
                     if let err = errorText {
                         Text("⚠️ \(err)")
-                            .font(.system(size: 13))
+                            .font(.system(size: 13, design: .rounded))
                             .foregroundColor(Color(hex: "#EF4444"))
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 30)
@@ -89,10 +87,9 @@ struct VoiceRecorderView: View {
 
                     Spacer()
 
-                    // Кнопки внизу
                     HStack(spacing: 12) {
                         Button("Отмена") { dismiss() }
-                            .font(.system(size: 16, weight: .semibold))
+                            .font(.system(size: 16, weight: .semibold, design: .rounded))
                             .foregroundColor(Color(hex: "#6B7280"))
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 14)
@@ -103,7 +100,7 @@ struct VoiceRecorderView: View {
                             onSave(savedFileName)
                             dismiss()
                         }
-                        .font(.system(size: 16, weight: .bold))
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
@@ -122,13 +119,10 @@ struct VoiceRecorderView: View {
 
     func toggleRecording() {
         if audio.isRecording {
-            // Стоп
             audio.stopRecording()
-            // Проверяем, что файл создан
             let path = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
                 .appendingPathComponent(tempFileName)
             if FileManager.default.fileExists(atPath: path.path) {
-                // Удаляем старый файл если был
                 if let old = savedFileName, old != tempFileName {
                     audio.deleteVoice(fileName: old)
                 }
@@ -137,7 +131,6 @@ struct VoiceRecorderView: View {
                 errorText = "Запись не удалась, попробуй ещё раз"
             }
         } else {
-            // Запрос разрешения и старт
             audio.requestPermission { granted in
                 if granted {
                     let ok = audio.startRecording(fileName: tempFileName)
