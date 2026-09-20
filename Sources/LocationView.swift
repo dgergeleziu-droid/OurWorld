@@ -13,7 +13,7 @@ struct LocationView: View {
     @State private var showCharactersPicker = false
     @State private var showSelectedPlayerSheet: Player? = nil
 
-    private let playerSize: CGFloat = 200
+    private let playerSize: CGFloat = 180
 
     var body: some View {
         GeometryReader { geo in
@@ -23,85 +23,75 @@ struct LocationView: View {
                 // Предметы
                 ForEach(worldStore.items(for: location)) { item in
                     if let catalog = ItemCatalog.item(byID: item.catalogID) {
-                        ItemOnSceneView(
-                            catalog: catalog,
-                            isDragging: draggingItemID == item.id
-                        )
+                        ItemOnSceneView(catalog: catalog, isDragging: draggingItemID == item.id)
+                            .position(
+                                x: item.x + (draggingItemID == item.id ? dragOffset.width : 0),
+                                y: item.y + (draggingItemID == item.id ? dragOffset.height : 0)
+                            )
+                            .gesture(
+                                DragGesture(minimumDistance: 10)
+                                    .onChanged { v in
+                                        if draggingItemID == nil {
+                                            draggingItemID = item.id
+                                            initialPosition = CGPoint(x: item.x, y: item.y)
+                                        }
+                                        dragOffset = v.translation
+                                    }
+                                    .onEnded { v in
+                                        var upd = item
+                                        upd.x = initialPosition.x + v.translation.width
+                                        upd.y = initialPosition.y + v.translation.height
+                                        worldStore.updateItem(upd, in: location)
+                                        draggingItemID = nil
+                                        dragOffset = .zero
+                                    }
+                            )
+                            .onTapGesture(count: 2) {
+                                worldStore.removeItem(item, in: location)
+                            }
+                    }
+                }
+
+                // Персонажи (только те, кто в этой локации + новые)
+                ForEach(characterStore.players) { player in
+                    let pos = position(for: player, in: geo.size)
+                    AvatarView(player: player, size: playerSize, isDragging: draggingPlayerID == player.id)
                         .position(
-                            x: item.x + (draggingItemID == item.id ? dragOffset.width : 0),
-                            y: item.y + (draggingItemID == item.id ? dragOffset.height : 0)
+                            x: pos.x + (draggingPlayerID == player.id ? dragOffset.width : 0),
+                            y: pos.y + (draggingPlayerID == player.id ? dragOffset.height : 0)
                         )
                         .gesture(
                             DragGesture(minimumDistance: 10)
                                 .onChanged { v in
-                                    if draggingItemID == nil {
-                                        draggingItemID = item.id
-                                        initialPosition = CGPoint(x: item.x, y: item.y)
+                                    if draggingPlayerID == nil {
+                                        draggingPlayerID = player.id
+                                        initialPosition = pos
                                     }
                                     dragOffset = v.translation
                                 }
                                 .onEnded { v in
-                                    var updated = item
-                                    updated.x = initialPosition.x + v.translation.width
-                                    updated.y = initialPosition.y + v.translation.height
-                                    worldStore.updateItem(updated, in: location)
-                                    draggingItemID = nil
+                                    let newX = initialPosition.x + v.translation.width
+                                    let newY = initialPosition.y + v.translation.height
+                                    let placed = PlacedPlayer(playerID: player.id,
+                                                              locationRaw: location.rawValue,
+                                                              x: newX, y: newY)
+                                    worldStore.setPosition(placed, in: location)
+                                    draggingPlayerID = nil
                                     dragOffset = .zero
                                 }
                         )
-                        .onTapGesture(count: 2) {
-                            worldStore.removeItem(item, in: location)
+                        .onTapGesture(count: 1) {
+                            if let voice = player.voiceFileName {
+                                AudioManager.shared.playVoice(fileName: voice)
+                            }
+                            showSelectedPlayerSheet = player
                         }
-                    }
                 }
 
-                // Персонажи
-                ForEach(characterStore.players) { player in
-                    let pos = position(for: player, in: geo.size)
-
-                    AvatarView(
-                        player: player,
-                        size: playerSize,
-                        isDragging: draggingPlayerID == player.id
-                    )
-                    .position(
-                        x: pos.x + (draggingPlayerID == player.id ? dragOffset.width : 0),
-                        y: pos.y + (draggingPlayerID == player.id ? dragOffset.height : 0)
-                    )
-                    .gesture(
-                        DragGesture(minimumDistance: 10)
-                            .onChanged { v in
-                                if draggingPlayerID == nil {
-                                    draggingPlayerID = player.id
-                                    initialPosition = pos
-                                }
-                                dragOffset = v.translation
-                            }
-                            .onEnded { v in
-                                let newX = initialPosition.x + v.translation.width
-                                let newY = initialPosition.y + v.translation.height
-                                let placed = PlacedPlayer(playerID: player.id, x: newX, y: newY)
-                                worldStore.setPosition(placed, in: location)
-                                draggingPlayerID = nil
-                                dragOffset = .zero
-                            }
-                    )
-                    .onTapGesture(count: 1) {
-                        if let voice = player.voiceFileName {
-                            AudioManager.shared.playVoice(fileName: voice)
-                        }
-                        showSelectedPlayerSheet = player
-                    }
-                }
-
-                // Верхняя панель
                 VStack {
                     HStack(spacing: 10) {
                         Spacer()
-
-                        Button {
-                            showCharactersPicker = true
-                        } label: {
+                        Button { showCharactersPicker = true } label: {
                             HStack(spacing: 5) {
                                 Image(systemName: "person.2.fill")
                                 Text("\(characterStore.players.count)")
@@ -109,13 +99,10 @@ struct LocationView: View {
                             .font(.system(size: 14, weight: .bold, design: .rounded))
                             .foregroundColor(Color(hex: "#111827"))
                             .padding(.horizontal, 14).padding(.vertical, 10)
-                            .background(Capsule().fill(Color.white))
+                            .background(Capsule().fill(.white))
                             .shadow(color: .black.opacity(0.12), radius: 6, y: 3)
                         }
-
-                        Button {
-                            showCatalog = true
-                        } label: {
+                        Button { showCatalog = true } label: {
                             HStack(spacing: 5) {
                                 Image(systemName: "plus.circle.fill")
                                 Text("Предмет")
@@ -127,19 +114,14 @@ struct LocationView: View {
                             .shadow(color: Color(hex: "#3B82F6").opacity(0.4), radius: 6, y: 3)
                         }
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
-
+                    .padding(.horizontal, 16).padding(.top, 8)
                     Spacer()
-
                     Text("Тапни по персонажу — карточка. Двойной тап по предмету — удалить.")
                         .font(.system(size: 11, weight: .medium, design: .rounded))
                         .foregroundColor(.white)
-                        .multilineTextAlignment(.center)
                         .padding(.horizontal, 14).padding(.vertical, 8)
                         .background(Color.black.opacity(0.55))
-                        .cornerRadius(16)
-                        .padding(.bottom, 20)
+                        .cornerRadius(16).padding(.bottom, 20)
                 }
             }
         }
@@ -148,16 +130,13 @@ struct LocationView: View {
         .sheet(isPresented: $showCatalog) {
             ItemCatalogView(location: location) { catalog in
                 addItemToScene(catalog: catalog)
-            }
-            .environmentObject(worldStore)
+            }.environmentObject(worldStore)
         }
         .sheet(isPresented: $showCharactersPicker) {
-            CharacterListSheet()
-                .environmentObject(characterStore)
+            CharacterListSheet().environmentObject(characterStore)
         }
         .sheet(item: $showSelectedPlayerSheet) { p in
-            PlayerDetailView(player: p)
-                .environmentObject(characterStore)
+            PlayerDetailView(player: p).environmentObject(characterStore)
         }
     }
 
@@ -175,6 +154,6 @@ struct LocationView: View {
         if let placed = worldStore.positions(for: location).first(where: { $0.playerID == player.id }) {
             return CGPoint(x: placed.x, y: placed.y)
         }
-        return CGPoint(x: size.width / 2, y: size.height * 0.6)
+        return CGPoint(x: size.width / 2, y: size.height * 0.65)
     }
 }
