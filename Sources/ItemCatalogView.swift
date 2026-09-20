@@ -51,9 +51,18 @@ struct ItemCatalogView: View {
                                     dismiss()
                                 } label: {
                                     VStack(spacing: 6) {
-                                        Text(item.emoji)
-                                            .font(.system(size: 44))
-                                            .frame(height: 60)
+                                        // 👇 ГЛАВНОЕ ИСПРАВЛЕНИЕ: если есть картинка — показываем её
+                                        if let imageName = item.imageName {
+                                            Image(imageName)
+                                                .resizable()
+                                                .scaledToFit()
+                                                .frame(width: 56, height: 56)
+                                        } else {
+                                            Text(item.emoji)
+                                                .font(.system(size: 44))
+                                                .frame(height: 60)
+                                        }
+
                                         Text(item.name)
                                             .font(.system(size: 11, weight: .medium, design: .rounded))
                                             .foregroundColor(Color(hex: "#374151"))
