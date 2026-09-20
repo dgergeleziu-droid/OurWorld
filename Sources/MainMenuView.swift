@@ -25,6 +25,40 @@ struct MainMenuView: View {
                         .padding(.horizontal, 20)
                         .padding(.top, 24)
 
+                        // Кнопка "Идти в мир"
+                        NavigationLink {
+                            WorldMapView()
+                        } label: {
+                            HStack(spacing: 14) {
+                                Image(systemName: "map.fill")
+                                    .font(.system(size: 28, weight: .bold))
+                                    .foregroundColor(.white)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Идти в мир")
+                                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                                        .foregroundColor(.white)
+                                    Text("Выбери здание и зайди внутрь")
+                                        .font(.system(size: 12, design: .rounded))
+                                        .foregroundColor(.white.opacity(0.85))
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 20, weight: .bold))
+                                    .foregroundColor(.white.opacity(0.8))
+                            }
+                            .padding(20)
+                            .background(
+                                LinearGradient(
+                                    colors: [Color(hex: "#3B82F6"), Color(hex: "#6366F1")],
+                                    startPoint: .topLeading, endPoint: .bottomTrailing
+                                )
+                            )
+                            .cornerRadius(22)
+                            .shadow(color: Color(hex: "#3B82F6").opacity(0.4), radius: 12, y: 6)
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.horizontal, 20)
+
                         // Персонажи
                         VStack(alignment: .leading, spacing: 14) {
                             HStack {
@@ -67,30 +101,11 @@ struct MainMenuView: View {
                             }
                         }
 
-                        // Локации
-                        VStack(alignment: .leading, spacing: 14) {
-                            Text("Локации")
-                                .font(.system(size: 20, weight: .bold, design: .rounded))
-                                .foregroundColor(Color(hex: "#111827"))
-                                .padding(.horizontal, 20)
-
-                            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 14) {
-                                ForEach(LocationID.allCases) { loc in
-                                    NavigationLink {
-                                        LocationView(location: loc)
-                                    } label: {
-                                        LocationCard(location: loc)
-                                    }
-                                    .buttonStyle(.plain)
-                                }
-                            }
-                            .padding(.horizontal, 20)
-                        }
-                        .padding(.bottom, 40)
+                        Spacer(minLength: 40)
                     }
                 }
 
-                // 🔴 КНОПКА ДИАГНОСТИКИ — правый нижний угол
+                // Кнопка диагностики
                 VStack {
                     Spacer()
                     HStack {
@@ -151,39 +166,13 @@ struct PlayerCard: View {
                 .lineLimit(1)
             if player.voiceFileName != nil {
                 HStack(spacing: 3) {
-                    Image(systemName: "mic.fill")
-                        .font(.system(size: 9))
-                    Text("голос")
-                        .font(.system(size: 10, weight: .medium, design: .rounded))
+                    Image(systemName: "mic.fill").font(.system(size: 9))
+                    Text("голос").font(.system(size: 10, weight: .medium, design: .rounded))
                 }
                 .foregroundColor(Color(hex: "#22C55E"))
             }
         }
         .frame(width: 140, height: 180)
-        .background(RoundedRectangle(cornerRadius: 22).fill(Color.white))
-        .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 4)
-    }
-}
-
-struct LocationCard: View {
-    let location: LocationID
-
-    var body: some View {
-        VStack(spacing: 12) {
-            ZStack {
-                Circle()
-                    .fill(Color(hex: location.color).opacity(0.15))
-                    .frame(width: 76, height: 76)
-                Image(systemName: location.icon)
-                    .font(.system(size: 32))
-                    .foregroundColor(Color(hex: location.color))
-            }
-            Text(location.rawValue)
-                .font(.system(size: 16, weight: .semibold, design: .rounded))
-                .foregroundColor(Color(hex: "#111827"))
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 22)
         .background(RoundedRectangle(cornerRadius: 22).fill(Color.white))
         .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 4)
     }
