@@ -61,12 +61,13 @@ enum Palette {
     static let eyeColors = ["#2C1810", "#3B82F6", "#22C55E", "#8B4513", "#7C3AED", "#EC4899"]
 }
 
-enum LocationID: String, CaseIterable, Identifiable {
+enum LocationID: String, CaseIterable, Identifiable, Codable {
     case home = "Дом"
     case cafe = "Кафе"
     case park = "Парк"
     case beach = "Пляж"
     case space = "Космос"
+    case hospital = "Больница"
 
     var id: String { rawValue }
 
@@ -77,6 +78,7 @@ enum LocationID: String, CaseIterable, Identifiable {
         case .park: return "tree.fill"
         case .beach: return "beach.umbrella.fill"
         case .space: return "moon.stars.fill"
+        case .hospital: return "cross.case.fill"
         }
     }
 
@@ -87,6 +89,31 @@ enum LocationID: String, CaseIterable, Identifiable {
         case .park: return "#22C55E"
         case .beach: return "#0EA5E9"
         case .space: return "#6366F1"
+        case .hospital: return "#EF4444"
         }
     }
+}
+
+// Предмет, который можно положить на сцену
+struct PlacedItem: Identifiable, Codable, Equatable {
+    let id: UUID
+    var catalogID: String
+    var x: Double
+    var y: Double
+    var scale: Double
+
+    init(id: UUID = UUID(), catalogID: String, x: Double, y: Double, scale: Double = 1.0) {
+        self.id = id
+        self.catalogID = catalogID
+        self.x = x
+        self.y = y
+        self.scale = scale
+    }
+}
+
+// Позиция персонажа на сцене
+struct PlacedPlayer: Codable, Equatable {
+    var playerID: UUID
+    var x: Double
+    var y: Double
 }
