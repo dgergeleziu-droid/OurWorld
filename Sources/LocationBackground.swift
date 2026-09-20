@@ -13,7 +13,6 @@ struct LocationBackground: View {
             case .shop:     shopBackground
             case .hospital: hospitalBackground
             case .school:   schoolBackground
-            case .space:    spaceBackground
             }
         }
         .ignoresSafeArea()
@@ -26,21 +25,14 @@ struct LocationBackground: View {
                 colors: [Color(hex: "#FFE9D6"), Color(hex: "#FFD1B3")],
                 startPoint: .top, endPoint: .bottom
             )
-            // Стена
             VStack(spacing: 0) {
-                Rectangle()
-                    .fill(Color(hex: "#F5D9B8"))
-                    .frame(height: 120)
+                Rectangle().fill(Color(hex: "#F5D9B8")).frame(height: 120)
                 Spacer()
             }
-            // Пол
             VStack(spacing: 0) {
                 Spacer()
-                Rectangle()
-                    .fill(Color(hex: "#C89B6E"))
-                    .frame(height: 140)
+                Rectangle().fill(Color(hex: "#C89B6E")).frame(height: 140)
             }
-            // Окно
             RoundedRectangle(cornerRadius: 12)
                 .fill(Color(hex: "#BFE6FF"))
                 .frame(width: 180, height: 120)
@@ -48,12 +40,8 @@ struct LocationBackground: View {
                     RoundedRectangle(cornerRadius: 12)
                         .stroke(Color.white, lineWidth: 8)
                 )
-                .overlay(
-                    Rectangle().fill(Color.white).frame(width: 8)
-                )
-                .overlay(
-                    Rectangle().fill(Color.white).frame(height: 8)
-                )
+                .overlay(Rectangle().fill(Color.white).frame(width: 8))
+                .overlay(Rectangle().fill(Color.white).frame(height: 8))
                 .offset(y: -60)
         }
     }
@@ -73,7 +61,6 @@ struct LocationBackground: View {
                 Spacer()
                 Rectangle().fill(Color(hex: "#A9714B")).frame(height: 150)
             }
-            // Витрина/полка
             HStack(spacing: 24) {
                 ForEach(0..<5, id: \.self) { _ in
                     RoundedRectangle(cornerRadius: 6)
@@ -92,20 +79,15 @@ struct LocationBackground: View {
                 colors: [Color(hex: "#AEE2FF"), Color(hex: "#E6F7FF")],
                 startPoint: .top, endPoint: .bottom
             )
-            // Солнце
             Circle()
                 .fill(Color(hex: "#FFE066"))
                 .frame(width: 90, height: 90)
                 .offset(x: 260, y: -160)
                 .shadow(color: .yellow.opacity(0.6), radius: 20)
-            // Трава
             VStack(spacing: 0) {
                 Spacer()
-                Rectangle()
-                    .fill(Color(hex: "#8FD16B"))
-                    .frame(height: 200)
+                Rectangle().fill(Color(hex: "#8FD16B")).frame(height: 200)
             }
-            // Облака
             HStack(spacing: 40) {
                 cloud
                 cloud
@@ -130,7 +112,6 @@ struct LocationBackground: View {
                 colors: [Color(hex: "#AEE2FF"), Color(hex: "#DCF3FF")],
                 startPoint: .top, endPoint: .bottom
             )
-            // Море
             VStack(spacing: 0) {
                 Spacer().frame(height: 100)
                 Rectangle()
@@ -142,14 +123,10 @@ struct LocationBackground: View {
                     )
                     .frame(height: 160)
             }
-            // Песок
             VStack(spacing: 0) {
                 Spacer()
-                Rectangle()
-                    .fill(Color(hex: "#FFE9A8"))
-                    .frame(height: 180)
+                Rectangle().fill(Color(hex: "#FFE9A8")).frame(height: 180)
             }
-            // Солнце
             Circle()
                 .fill(Color(hex: "#FFD54F"))
                 .frame(width: 100, height: 100)
@@ -173,7 +150,6 @@ struct LocationBackground: View {
                 Spacer()
                 Rectangle().fill(Color(hex: "#B8966E")).frame(height: 140)
             }
-            // Полки с товарами
             HStack(spacing: 20) {
                 ForEach(0..<6, id: \.self) { _ in
                     RoundedRectangle(cornerRadius: 6)
@@ -192,17 +168,14 @@ struct LocationBackground: View {
                 colors: [Color(hex: "#EAF6FF"), Color(hex: "#C9E7FB")],
                 startPoint: .top, endPoint: .bottom
             )
-            // Стена
             VStack(spacing: 0) {
                 Rectangle().fill(Color(hex: "#F2FAFF")).frame(height: 130)
                 Spacer()
             }
-            // Пол
             VStack(spacing: 0) {
                 Spacer()
                 Rectangle().fill(Color(hex: "#B9D4E5")).frame(height: 140)
             }
-            // Красный крест
             ZStack {
                 RoundedRectangle(cornerRadius: 10)
                     .fill(Color.white)
@@ -221,17 +194,14 @@ struct LocationBackground: View {
                 colors: [Color(hex: "#FFF4D6"), Color(hex: "#FCE1A8")],
                 startPoint: .top, endPoint: .bottom
             )
-            // Стена
             VStack(spacing: 0) {
                 Rectangle().fill(Color(hex: "#F9E8C2")).frame(height: 130)
                 Spacer()
             }
-            // Пол
             VStack(spacing: 0) {
                 Spacer()
                 Rectangle().fill(Color(hex: "#B8875A")).frame(height: 140)
             }
-            // Доска
             RoundedRectangle(cornerRadius: 10)
                 .fill(Color(hex: "#2E6B4F"))
                 .frame(width: 260, height: 130)
@@ -240,34 +210,6 @@ struct LocationBackground: View {
                         .stroke(Color(hex: "#8B5A2B"), lineWidth: 10)
                 )
                 .offset(y: -50)
-        }
-    }
-
-    // MARK: - Космос
-    private var spaceBackground: some View {
-        ZStack {
-            LinearGradient(
-                colors: [Color(hex: "#0B0B2B"), Color(hex: "#2A1A5E")],
-                startPoint: .top, endPoint: .bottom
-            )
-            // Звёзды
-            ForEach(0..<40, id: \.self) { i in
-                Circle()
-                    .fill(Color.white)
-                    .frame(width: CGFloat.random(in: 1...3),
-                           height: CGFloat.random(in: 1...3))
-                    .position(
-                        x: CGFloat.random(in: 0...UIScreen.main.bounds.width),
-                        y: CGFloat.random(in: 0...UIScreen.main.bounds.height)
-                    )
-                    .opacity(0.8)
-            }
-            // Луна
-            Circle()
-                .fill(Color(hex: "#F0E9C8"))
-                .frame(width: 110, height: 110)
-                .offset(x: 240, y: -150)
-                .shadow(color: .white.opacity(0.4), radius: 30)
         }
     }
 }
