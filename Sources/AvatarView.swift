@@ -11,6 +11,22 @@ struct AvatarView: View {
     private var outfit: Color { Palette.outfitColors[safe: player.outfitColor] ?? Palette.outfitColors[0] }
 
     var body: some View {
+        // Если у персонажа задана картинка — показываем её
+        if let imageName = player.imageName {
+            Image(imageName)
+                .resizable()
+                .scaledToFit()
+                .frame(width: size, height: size)
+                .scaleEffect(isDragging ? 1.15 : 1.0)
+                .animation(.spring(response: 0.25, dampingFraction: 0.7), value: isDragging)
+        } else {
+            drawnAvatar
+        }
+    }
+
+    // MARK: - Нарисованный персонаж (Toca Boca style)
+    @ViewBuilder
+    var drawnAvatar: some View {
         ZStack {
             // Тень на полу
             Ellipse()
@@ -77,7 +93,6 @@ struct AvatarView: View {
     var bodyView: some View {
         switch player.outfitStyle {
         case 1, 6: // Платье, сарафан
-            // Юбка — треугольник
             Path { p in
                 let w = size * 0.44
                 let h = size * 0.22
@@ -242,17 +257,14 @@ struct AvatarView: View {
     @ViewBuilder
     var faceView: some View {
         ZStack {
-            // Глаза
             eyeView.offset(x: -size * 0.12, y: -size * 0.15)
             eyeView.offset(x: size * 0.12, y: -size * 0.15)
 
-            // Нос
             Circle()
                 .fill(skin.opacity(0.75))
                 .frame(width: size * 0.03, height: size * 0.03)
                 .offset(y: -size * 0.07)
 
-            // Рот
             mouthView.offset(y: -size * 0.01)
         }
     }
@@ -282,11 +294,11 @@ struct AvatarView: View {
         let w = size * 0.14
         let h = size * 0.07
         switch player.mouthStyle {
-        case 0: // Улыбка
+        case 0:
             SmileShape().stroke(Color(hex: "#8B2C1A"),
                                 style: StrokeStyle(lineWidth: size * 0.018, lineCap: .round))
                 .frame(width: w, height: h)
-        case 1: // Открытая улыбка
+        case 1:
             ZStack {
                 FilledSmileShape().fill(Color(hex: "#C0392B"))
                     .frame(width: w, height: h * 1.3)
@@ -294,7 +306,7 @@ struct AvatarView: View {
                     .frame(width: w * 0.85, height: h * 0.5)
                     .offset(y: -h * 0.3)
             }
-        case 2: // Бантик
+        case 2:
             ZStack {
                 Capsule().fill(Color(hex: "#C0392B"))
                     .frame(width: w, height: size * 0.025)
@@ -302,13 +314,13 @@ struct AvatarView: View {
                     .frame(width: size * 0.02, height: size * 0.02)
                     .offset(y: size * 0.018)
             }
-        case 3: // Прямая
+        case 3:
             Capsule().fill(Color(hex: "#8B2C1A"))
                 .frame(width: w * 0.8, height: size * 0.02)
-        case 4: // Кружок
+        case 4:
             Circle().fill(Color(hex: "#8B2C1A"))
                 .frame(width: size * 0.06, height: size * 0.06)
-        default: // Уголки
+        default:
             HStack(spacing: w * 0.4) {
                 SmileShape()
                     .stroke(Color(hex: "#8B2C1A"), lineWidth: size * 0.014)
