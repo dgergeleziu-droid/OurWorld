@@ -94,6 +94,9 @@ struct LocationView: View {
         }
         .ignoresSafeArea(.keyboard)
         .navigationBarBackButtonHidden(true)
+        .onAppear {
+            seedCharactersIfNeeded()
+        }
         .sheet(isPresented: $showCatalog) {
             ItemCatalogView(location: location) { catalog in
                 let c = floorZone.center
@@ -116,6 +119,43 @@ struct LocationView: View {
             PlayerDetailView(player: player)
                 .environmentObject(characterStore)
                 .environmentObject(worldStore)
+        }
+    }
+
+    // MARK: - Авто-расстановка персонажей
+
+    /// При первом заходе в локацию — если пусто,
+    /// расставляет всех существующих персонажей по полу в ряд.
+    private func seedCharactersIfNeeded() {
+        // Если уже кто-то есть в локации — не трогаем
+        let existing = worldStore.positions(for: location)
+        guard existing.isEmpty else { return }
+
+        // Берём всех персонажей из хранилища (Аня, Демьян и созданные)
+        let players = characterStore.players
+        guard !players.isEmpty else { return }
+
+        let zone = floorZone
+        let count = players.count
+
+        for (index, player) in players.enumerated() {
+            let x: Double
+            if count == 1 {
+                // Один персонаж — по центру
+                x = zone.center.x
+            } else {
+                // Несколько — равномерно по ширине пола
+                let step = (zone.xMax - zone.xMin) / Double(count + 1)
+                x = zone.xMin + step * Double(index + 1)
+            }
+
+            let placed = PlacedPlayer(
+                playerID: player.id,
+                locationRaw: location.rawValue,
+                x: x,
+                y: zone.center.y
+            )
+            worldStore.setPosition(placed, in: location)
         }
     }
 
