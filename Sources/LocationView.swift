@@ -92,8 +92,7 @@ struct LocationView: View {
         .onAppear {
             seedMissingCharacters()
         }
-        .onChange(of: characterStore.players) { _, _ in
-            // Когда добавили/восстановили персонажа — сразу ставим в локацию
+        .onChange(of: characterStore.players) { _ in
             seedMissingCharacters()
         }
         .sheet(isPresented: $showCatalog) {
@@ -133,10 +132,7 @@ struct LocationView: View {
 
         let zone = floorZone
 
-        // Раскладываем только новых — по свободной части пола
-        // Старые позиции не трогаем
         for (index, player) in missing.enumerated() {
-            // Смещение с учётом уже стоящих персонажей
             let totalSlots = existing.count + missing.count
             let slotIndex = existing.count + index
 
