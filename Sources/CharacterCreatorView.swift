@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct CharacterCreatorView: View {
-    @EnvironmentObject var store: CharacterStore
+    @EnvironmentObject var characterStore: CharacterStore
     @Environment(\.dismiss) var dismiss
 
     @State private var draft: Player
@@ -26,7 +26,7 @@ struct CharacterCreatorView: View {
 
                 ScrollView {
                     VStack(spacing: 22) {
-                        AvatarView(player: draft, size: 190)
+                        AvatarView(player: draft, size: 200)
                             .padding(.top, 20)
 
                         // Имя
@@ -44,11 +44,9 @@ struct CharacterCreatorView: View {
                         }
                         .padding(.horizontal, 20)
 
-                        // Палитры
                         paletteRow(title: "Цвет кожи", colors: Palette.skinColors, selected: $draft.skinColorIndex)
                         paletteRow(title: "Цвет волос", colors: Palette.hairColors, selected: $draft.hairColorIndex)
 
-                        // Причёска
                         optionsRow(
                             title: "Причёска",
                             options: ["Короткая", "Длинная", "Пучок", "Хвост", "Кудри"],
@@ -57,7 +55,6 @@ struct CharacterCreatorView: View {
 
                         paletteRow(title: "Цвет одежды", colors: Palette.clothesColors, selected: $draft.clothesColorIndex)
 
-                        // Стиль одежды
                         optionsRow(
                             title: "Одежда",
                             options: ["Футболка", "Платье", "Худи"],
@@ -66,7 +63,6 @@ struct CharacterCreatorView: View {
 
                         paletteRow(title: "Цвет глаз", colors: Palette.eyeColors, selected: $draft.eyeColorIndex)
 
-                        // Сохранить
                         Button {
                             save()
                         } label: {
@@ -155,10 +151,10 @@ struct CharacterCreatorView: View {
         draft.name = trimmed.isEmpty ? "Персонаж" : trimmed
 
         if isEditing {
-            store.update(draft)
+            characterStore.update(draft)
             onSave?(draft)
         } else {
-            store.add(draft)
+            characterStore.add(draft)
         }
         dismiss()
     }
