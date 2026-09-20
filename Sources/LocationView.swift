@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct LocationView: View {
-
     let location: LocationID
 
     @EnvironmentObject var worldStore: WorldStore
@@ -18,30 +17,35 @@ struct LocationView: View {
     var body: some View {
         GeometryReader { geo in
             ZStack {
-
-                // === Фон локации (изометрия) ===
+                // Фон локации
                 LocationBackground(location: location)
 
-                // === Предметы на полу ===
-                ForEach(worldStore.items(in: location)) { item in
-                    DraggableItem(
-                        item: item,
-                        geoSize: geo.size,
-                        floorZone: floorZone,
-                        onMove: { x, y in
-                            worldStore.moveItem(item, x: x, y: y)
-                        },
-                        onDelete: {
-                            withAnimation(AppAnimation.fade) {
-                                worldStore.removeItem(item)
+                // === Предметы ===
+                ForEach(worldStore.items(for: location)) { item in
+                    if let catalog = catalogItem(for: item.catalogID) {
+                        DraggableItem(
+                            item: item,
+                            catalog: catalog,
+                            geoSize: geo.size,
+                            floorZone: floorZone,
+                            onMove: { x, y in
+                                var updated = item
+                                updated.x = x
+                                updated.y = y
+                                worldStore.updateItem(updated, in: location)
+                            },
+                            onDelete: {
+                                withAnimation(AppAnimation.fade) {
+                                    worldStore.removeItem(item, in: location)
+                                }
+                                showSnackbar("Предмет удалён")
                             }
-                            showSnackbar("Предмет удалён")
-                        }
-                    )
+                        )
+                    }
                 }
 
-                // === Персонажи на полу ===
-                ForEach(worldStore.players(in: location)) { placed in
+                // === Персонажи ===
+                ForEach(worldStore.positions(for: location)) { placed in
                     if let player = characterStore.player(by: placed.playerID) {
                         DraggablePlayer(
                             placed: placed,
@@ -49,7 +53,14 @@ struct LocationView: View {
                             geoSize: geo.size,
                             floorZone: floorZone,
                             onMove: { x, y in
-                                worldStore.movePlayer(placed, x: x, y: y)
+                                let updated = PlacedPlayer(
+                                    id: placed.id,
+                                    playerID: placed.playerID,
+                                    locationRaw: placed.locationRaw,
+                                    x: x,
+                                    y: y
+                                )
+                                worldStore.setPosition(updated, in: location)
                             },
                             onTap: {
                                 selectedPlayer = player
@@ -84,18 +95,34 @@ struct LocationView: View {
         .ignoresSafeArea(.keyboard)
         .navigationBarBackButtonHidden(true)
         .sheet(isPresented: $showCatalog) {
-            ItemCatalogView { item in
+            ItemCatalogView(location: location) { catalog in
                 let c = floorZone.center
-                worldStore.addItem(item, at: c.x, y: c.y, in: location)
-                showSnackbar("\(item.name) добавлен")
+                let placed = PlacedItem(
+                    catalogID: catalog.id,
+                    x: c.x,
+                    y: c.y
+                )
+                worldStore.addItem(placed, to: location)
+                showSnackbar("\(catalog.name) добавлен")
             }
+            .environmentObject(worldStore)
         }
         .sheet(isPresented: $showCharacters) {
-            CharacterListSheet(location: location)
+            CharacterListSheet()
+                .environmentObject(characterStore)
+                .environmentObject(worldStore)
         }
         .sheet(item: $selectedPlayer) { player in
             PlayerDetailView(player: player)
+                .environmentObject(characterStore)
+                .environmentObject(worldStore)
         }
+    }
+
+    // MARK: - Поиск CatalogItem по ID
+
+    private func catalogItem(for id: String) -> CatalogItem? {
+        ItemCatalog.all.first { $0.id == id }
     }
 
     // MARK: - Верхний бар
@@ -156,7 +183,7 @@ struct LocationView: View {
                     showCharacters = true
                 } label: {
                     Label(
-                        "Персонажи (\(worldStore.players(in: location).count))",
+                        "Персонажи (\(worldStore.positions(for: location).count))",
                         systemImage: "person.2.fill"
                     )
                     .font(.system(size: 15, weight: .bold, design: .rounded))
@@ -190,8 +217,10 @@ struct LocationView: View {
 }
 
 // MARK: - Перетаскиваемый предмет
+
 private struct DraggableItem: View {
     let item: PlacedItem
+    let catalog: CatalogItem
     let geoSize: CGSize
     let floorZone: FloorZone
     let onMove: (Double, Double) -> Void
@@ -201,7 +230,7 @@ private struct DraggableItem: View {
     @State private var dragging: Bool = false
 
     var body: some View {
-        ItemOnSceneView(item: item)
+        ItemOnSceneView(catalog: catalog, isDragging: dragging)
             .position(
                 x: CGFloat(item.x) * geoSize.width + dragOffset.width,
                 y: CGFloat(item.y) * geoSize.height + dragOffset.height
@@ -224,13 +253,12 @@ private struct DraggableItem: View {
             .onTapGesture(count: 2) {
                 onDelete()
             }
-            .scaleEffect(dragging ? 1.08 : 1.0)
             .zIndex(dragging ? 100 : 0)
-            .animation(AppAnimation.tap, value: dragging)
     }
 }
 
 // MARK: - Перетаскиваемый персонаж
+
 private struct DraggablePlayer: View {
     let placed: PlacedPlayer
     let player: Player
@@ -243,8 +271,7 @@ private struct DraggablePlayer: View {
     @State private var dragging: Bool = false
 
     var body: some View {
-        AvatarView(player: player)
-            .frame(width: 180, height: 180)
+        AvatarView(player: player, size: 180)
             .position(
                 x: CGFloat(placed.x) * geoSize.width + dragOffset.width,
                 y: CGFloat(placed.y) * geoSize.height + dragOffset.height
@@ -269,6 +296,5 @@ private struct DraggablePlayer: View {
             }
             .scaleEffect(dragging ? 1.05 : 1.0)
             .zIndex(dragging ? 100 : 0)
-            .animation(AppAnimation.tap, value: dragging)
     }
 }
