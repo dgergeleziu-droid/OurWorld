@@ -1,146 +1,182 @@
 import SwiftUI
 
-// MARK: - Пресеты анимаций (перевод из Android XML)
-
+// MARK: - Константы анимаций (адаптировано из Android Material)
 enum AppAnimation {
 
-    // fade_in.xml / fade_out.xml — 150 ms
-    static let fade = Animation.easeOut(duration: 0.15)
+    // === Базовые (были раньше) ===
+    /// 0.15s ease out — стандартный fade
+    static let fade = Animation.timingCurve(0.4, 0.0, 0.2, 1.0, duration: 0.15)
 
-    // m3_motion_fade_enter.xml — fade + scale 0.8→1.0
+    /// Spring при появлении
     static let fadeEnter = Animation.spring(response: 0.45, dampingFraction: 0.85)
 
-    // m3_motion_fade_exit.xml — просто fade out 150 ms
-    static let fadeExit = Animation.easeIn(duration: 0.15)
+    /// Bottom sheet
+    static let bottomSheetIn = Animation.spring(response: 0.4, dampingFraction: 0.85)
+    static let bottomSheetOut = Animation.timingCurve(0.4, 0.0, 1.0, 1.0, duration: 0.2)
 
-    // design_bottom_sheet_slide_in.xml — снизу вверх, 250 ms
-    static let bottomSheetIn = Animation.easeOut(duration: 0.30)
+    /// Боковая шторка — 0.28s
+    static let sideSheet = Animation.timingCurve(0.4, 0.0, 0.2, 1.0, duration: 0.28)
 
-    // design_bottom_sheet_slide_out.xml — вниз, 200 ms
-    static let bottomSheetOut = Animation.easeIn(duration: 0.22)
-
-    // m3_side_sheet_enter_from_right.xml — сбоку, 275 ms
-    static let sideSheet = Animation.easeInOut(duration: 0.28)
-
-    // abc_slide_in_bottom.xml — 50% снизу + fade
-    static let slideInBottom = Animation.easeOut(duration: 0.30)
-
-    // abc_slide_in_top.xml — 50% сверху + fade
-    static let slideInTop = Animation.easeOut(duration: 0.30)
-
-    // design_snackbar_in.xml — снизу
+    /// Snackbar
     static let snackbar = Animation.spring(response: 0.4, dampingFraction: 0.8)
 
-    // lunar_console_slide_in_top.xml — сверху
-    static let console = Animation.easeOut(duration: 0.25)
-
-    // abc_popup_enter.xml — быстрое появление
-    static let popup = Animation.easeOut(duration: 0.15)
-
-    // btn_radio_to_on — пружинка
+    /// Нажатие — пружинка
     static let tap = Animation.spring(response: 0.25, dampingFraction: 0.6)
+
+    // === Extended FAB (mtrl_extended_fab_show/hide_motion_spec.xml) ===
+    /// Показ: opacity 0→1 за 150ms, scale 0.8→1.0 за 150ms
+    static let extendedFabShow = Animation.timingCurve(0.4, 0.0, 0.2, 1.0, duration: 0.15)
+    /// Скрытие: opacity 1→0 за 75ms linear
+    static let extendedFabHide = Animation.linear(duration: 0.075)
+
+    // === FAB (mtrl_fab_show/hide_motion_spec.xml) ===
+    /// Показ: scale 330ms linear_out_slow_in, opacity 15ms с задержкой 30ms, iconScale 240ms с задержкой 90ms
+    static let fabShow = Animation.timingCurve(0.0, 0.0, 0.2, 1.0, duration: 0.33)
+    /// Скрытие: scale 135ms fast_out_linear_in, opacity 15ms с задержкой 150ms
+    static let fabHide = Animation.timingCurve(0.4, 0.0, 1.0, 1.0, duration: 0.135)
+
+    // === Fragment transitions ===
+    /// Открытие enter: scale 0.85→1.0 за 300ms
+    static let fragmentOpenEnter = Animation.timingCurve(0.4, 0.0, 0.2, 1.0, duration: 0.3)
+    /// Закрытие exit: scale 1.0→0.9 за 300ms
+    static let fragmentCloseExit = Animation.timingCurve(0.4, 0.0, 0.2, 1.0, duration: 0.3)
+    /// Открытие exit: scale 1.0→1.15 за 300ms
+    static let fragmentOpenExit = Animation.timingCurve(0.4, 0.0, 0.2, 1.0, duration: 0.3)
+    /// Закрытие enter: scale 1.1→1.0 за 300ms
+    static let fragmentCloseEnter = Animation.timingCurve(0.4, 0.0, 0.2, 1.0, duration: 0.3)
+
+    // === M3 Extended FAB (m3_extended_fab_show/hide_motion_spec.xml) ===
+    /// Показ: long2 (500ms) emphasized, scale 0.4→1.0
+    static let m3ExtendedFabShow = Animation.timingCurve(0.2, 0.0, 0.0, 1.0, duration: 0.5)
+    /// Скрытие: short3 (150ms) emphasizedAccelerate
+    static let m3ExtendedFabHide = Animation.timingCurve(0.3, 0.0, 0.8, 0.15, duration: 0.15)
 }
 
-// MARK: - Модификатор появления снизу вверх (bottom sheet)
-struct BottomSheetTransition: ViewModifier {
-    let isPresented: Bool
+// MARK: - Модификаторы
 
-    func body(content: Content) -> some View {
-        content
-            .offset(y: isPresented ? 0 : UIScreen.main.bounds.height)
-            .opacity(isPresented ? 1 : 0)
-            .animation(AppAnimation.bottomSheetIn, value: isPresented)
+extension View {
+
+    /// Bottom sheet: выезд снизу + fade
+    func bottomSheet() -> some View {
+        modifier(BottomSheetModifier())
+    }
+
+    /// Side sheet: выезд справа + fade
+    func sideSheet() -> some View {
+        modifier(SideSheetModifier())
+    }
+
+    /// Fade + Scale enter (0.85 → 1.0)
+    func fadeScaleEnter() -> some View {
+        modifier(FadeScaleEnterModifier())
+    }
+
+    /// Пульсация: scale 1.0 ↔ 1.05
+    func pulse() -> some View {
+        modifier(PulseModifier())
+    }
+
+    /// Покачивание: rotation -3° ↔ 3°
+    func wiggle() -> some View {
+        modifier(WiggleModifier())
+    }
+
+    /// Staggered появление по индексу
+    func staggered(index: Int) -> some View {
+        modifier(StaggeredModifier(index: index))
     }
 }
 
-// MARK: - Модификатор появления сбоку (side sheet)
-struct SideSheetTransition: ViewModifier {
-    let isPresented: Bool
-    let fromRight: Bool
+// MARK: - Реализации модификаторов
 
-    func body(content: Content) -> some View {
-        content
-            .offset(x: isPresented ? 0 : (fromRight ? UIScreen.main.bounds.width : -UIScreen.main.bounds.width))
-            .opacity(isPresented ? 1 : 0)
-            .animation(AppAnimation.sideSheet, value: isPresented)
-    }
-}
-
-// MARK: - Модификатор всплытия с масштабом (fade enter)
-struct FadeScaleEnter: ViewModifier {
+private struct BottomSheetModifier: ViewModifier {
     @State private var appeared = false
+    func body(content: Content) -> some View {
+        content
+            .offset(y: appeared ? 0 : 40)
+            .opacity(appeared ? 1 : 0)
+            .onAppear {
+                withAnimation(AppAnimation.bottomSheetIn) { appeared = true }
+            }
+    }
+}
 
+private struct SideSheetModifier: ViewModifier {
+    @State private var appeared = false
+    func body(content: Content) -> some View {
+        content
+            .offset(x: appeared ? 0 : 60)
+            .opacity(appeared ? 1 : 0)
+            .onAppear {
+                withAnimation(AppAnimation.sideSheet) { appeared = true }
+            }
+    }
+}
+
+private struct FadeScaleEnterModifier: ViewModifier {
+    @State private var appeared = false
     func body(content: Content) -> some View {
         content
             .scaleEffect(appeared ? 1.0 : 0.85)
-            .opacity(appeared ? 1.0 : 0.0)
+            .opacity(appeared ? 1 : 0)
             .onAppear {
-                withAnimation(AppAnimation.fadeEnter) {
-                    appeared = true
+                withAnimation(AppAnimation.fragmentOpenEnter) { appeared = true }
+            }
+    }
+}
+
+private struct PulseModifier: ViewModifier {
+    @State private var pulse = false
+    func body(content: Content) -> some View {
+        content
+            .scaleEffect(pulse ? 1.05 : 1.0)
+            .onAppear {
+                withAnimation(
+                    .easeInOut(duration: 1.0).repeatForever(autoreverses: true)
+                ) {
+                    pulse = true
                 }
             }
     }
 }
 
-// MARK: - Пульсация (для кнопок)
-struct PulseEffect: ViewModifier {
-    @State private var pulse = false
-
-    func body(content: Content) -> some View {
-        content
-            .scaleEffect(pulse ? 1.06 : 1.0)
-            .animation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true), value: pulse)
-            .onAppear { pulse = true }
-    }
-}
-
-// MARK: - Покачивание (для привлечения внимания)
-struct WiggleEffect: ViewModifier {
+private struct WiggleModifier: ViewModifier {
     @State private var wiggle = false
-
     func body(content: Content) -> some View {
         content
             .rotationEffect(.degrees(wiggle ? 3 : -3))
-            .animation(.easeInOut(duration: 0.5).repeatForever(autoreverses: true), value: wiggle)
-            .onAppear { wiggle = true }
+            .onAppear {
+                withAnimation(
+                    .easeInOut(duration: 0.4).repeatForever(autoreverses: true)
+                ) {
+                    wiggle = true
+                }
+            }
     }
 }
 
-// MARK: - Плавное появление списка (с задержкой для каждого элемента)
-struct StaggeredAppear: ViewModifier {
+private struct StaggeredModifier: ViewModifier {
     let index: Int
     @State private var appeared = false
-
     func body(content: Content) -> some View {
         content
-            .opacity(appeared ? 1.0 : 0.0)
+            .opacity(appeared ? 1 : 0)
             .offset(y: appeared ? 0 : 20)
             .onAppear {
-                withAnimation(AppAnimation.fadeEnter.delay(Double(index) * 0.06)) {
+                let delay = Double(index) * 0.05
+                withAnimation(AppAnimation.fadeEnter.delay(delay)) {
                     appeared = true
                 }
             }
     }
 }
 
-// MARK: - Расширения для удобства
-extension View {
-    func bottomSheet(isPresented: Bool) -> some View {
-        modifier(BottomSheetTransition(isPresented: isPresented))
-    }
-    func sideSheet(isPresented: Bool, fromRight: Bool = true) -> some View {
-        modifier(SideSheetTransition(isPresented: isPresented, fromRight: fromRight))
-    }
-    func fadeScaleEnter() -> some View {
-        modifier(FadeScaleEnter())
-    }
-    func pulse() -> some View {
-        modifier(PulseEffect())
-    }
-    func wiggle() -> some View {
-        modifier(WiggleEffect())
-    }
-    func staggered(index: Int) -> some View {
-        modifier(StaggeredAppear(index: index))
+// MARK: - BounceButtonStyle
+
+struct BounceButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.94 : 1.0)
+            .animation(AppAnimation.tap, value: configuration.isPressed)
     }
 }
