@@ -13,6 +13,8 @@ struct LocationView: View {
     @State private var showCharactersPicker = false
     @State private var showSelectedPlayerSheet: Player? = nil
 
+    private let playerSize: CGFloat = 200
+
     var body: some View {
         GeometryReader { geo in
             ZStack {
@@ -47,7 +49,6 @@ struct LocationView: View {
                                     dragOffset = .zero
                                 }
                         )
-                        // 👇 УДАЛЕНИЕ: двойной тап вместо долгого нажатия
                         .onTapGesture(count: 2) {
                             worldStore.removeItem(item, in: location)
                         }
@@ -60,7 +61,7 @@ struct LocationView: View {
 
                     AvatarView(
                         player: player,
-                        size: 110,
+                        size: playerSize,
                         isDragging: draggingPlayerID == player.id
                     )
                     .position(
@@ -85,7 +86,6 @@ struct LocationView: View {
                                 dragOffset = .zero
                             }
                     )
-                    // Одиночный тап по персонажу — открывает карточку с голосом и удалением
                     .onTapGesture(count: 1) {
                         if let voice = player.voiceFileName {
                             AudioManager.shared.playVoice(fileName: voice)
@@ -132,8 +132,7 @@ struct LocationView: View {
 
                     Spacer()
 
-                    // Подсказка
-                    Text("Перетаскивай пальцем. Двойной тап по предмету — удалить. Тап по персонажу — карточка.")
+                    Text("Тапни по персонажу — карточка. Двойной тап по предмету — удалить.")
                         .font(.system(size: 11, weight: .medium, design: .rounded))
                         .foregroundColor(.white)
                         .multilineTextAlignment(.center)
@@ -176,6 +175,6 @@ struct LocationView: View {
         if let placed = worldStore.positions(for: location).first(where: { $0.playerID == player.id }) {
             return CGPoint(x: placed.x, y: placed.y)
         }
-        return CGPoint(x: size.width / 2, y: size.height * 0.7)
+        return CGPoint(x: size.width / 2, y: size.height * 0.6)
     }
 }
