@@ -14,7 +14,6 @@ struct ItemCatalogView: View {
                 Color(hex: "#FDF6EC").ignoresSafeArea()
 
                 VStack(spacing: 0) {
-                    // Табы категорий
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 10) {
                             ForEach(ItemCategory.allCases, id: \.self) { cat in
@@ -27,9 +26,7 @@ struct ItemCatalogView: View {
                                         .font(.system(size: 14, weight: .semibold, design: .rounded))
                                         .foregroundColor(selectedCategory == cat ? .white : Color(hex: "#4B5563"))
                                         .padding(.horizontal, 16).padding(.vertical, 10)
-                                        .background(
-                                            Capsule().fill(selectedCategory == cat ? Color(hex: "#3B82F6") : Color.white)
-                                        )
+                                        .background(Capsule().fill(selectedCategory == cat ? Color(hex: "#3B82F6") : Color.white))
                                         .shadow(color: .black.opacity(0.05), radius: 3, y: 2)
                                 }
                             }
@@ -38,7 +35,6 @@ struct ItemCatalogView: View {
                         .padding(.vertical, 12)
                     }
 
-                    // Сетка
                     ScrollView {
                         LazyVGrid(columns: [
                             GridItem(.flexible(), spacing: 12),
@@ -51,9 +47,9 @@ struct ItemCatalogView: View {
                                     dismiss()
                                 } label: {
                                     VStack(spacing: 6) {
-                                        // 👇 ГЛАВНОЕ ИСПРАВЛЕНИЕ: если есть картинка — показываем её
-                                        if let imageName = item.imageName {
-                                            Image(imageName)
+                                        if let imageName = item.imageName,
+                                           let uiImage = UIImage(named: imageName) {
+                                            Image(uiImage: uiImage)
                                                 .resizable()
                                                 .scaledToFit()
                                                 .frame(width: 56, height: 56)
