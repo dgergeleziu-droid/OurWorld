@@ -3,14 +3,13 @@ options:
   bundleIdPrefix: com.example
   deploymentTarget:
     iOS: "16.0"
+  createIntermediateGroups: true
 targets:
   OurWorld:
     type: application
     platform: iOS
     sources:
       - path: Sources
-        excludes:
-          - "Assets/**"
     resources:
       - path: Sources/Assets
     settings:
