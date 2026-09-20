@@ -30,7 +30,7 @@ struct LocationView: View {
                             y: item.y + (draggingItemID == item.id ? dragOffset.height : 0)
                         )
                         .gesture(
-                            DragGesture(minimumDistance: 0)
+                            DragGesture(minimumDistance: 10)
                                 .onChanged { v in
                                     if draggingItemID == nil {
                                         draggingItemID = item.id
@@ -47,7 +47,8 @@ struct LocationView: View {
                                     dragOffset = .zero
                                 }
                         )
-                        .onLongPressGesture {
+                        // 👇 УДАЛЕНИЕ: двойной тап вместо долгого нажатия
+                        .onTapGesture(count: 2) {
                             worldStore.removeItem(item, in: location)
                         }
                     }
@@ -67,7 +68,7 @@ struct LocationView: View {
                         y: pos.y + (draggingPlayerID == player.id ? dragOffset.height : 0)
                     )
                     .gesture(
-                        DragGesture(minimumDistance: 0)
+                        DragGesture(minimumDistance: 10)
                             .onChanged { v in
                                 if draggingPlayerID == nil {
                                     draggingPlayerID = player.id
@@ -80,22 +81,20 @@ struct LocationView: View {
                                 let newY = initialPosition.y + v.translation.height
                                 let placed = PlacedPlayer(playerID: player.id, x: newX, y: newY)
                                 worldStore.setPosition(placed, in: location)
-
-                                // Если почти не двигали — это тап → играем голос
-                                if abs(v.translation.width) < 5 && abs(v.translation.height) < 5 {
-                                    if let voice = player.voiceFileName {
-                                        AudioManager.shared.playVoice(fileName: voice)
-                                    }
-                                    showSelectedPlayerSheet = player
-                                }
-
                                 draggingPlayerID = nil
                                 dragOffset = .zero
                             }
                     )
+                    // Одиночный тап по персонажу — открывает карточку с голосом и удалением
+                    .onTapGesture(count: 1) {
+                        if let voice = player.voiceFileName {
+                            AudioManager.shared.playVoice(fileName: voice)
+                        }
+                        showSelectedPlayerSheet = player
+                    }
                 }
 
-                // Верхняя панель с кнопками
+                // Верхняя панель
                 VStack {
                     HStack(spacing: 10) {
                         Spacer()
@@ -134,7 +133,7 @@ struct LocationView: View {
                     Spacer()
 
                     // Подсказка
-                    Text("Перетаскивай персонажей и предметы. Долгое нажатие на предмет — удалить.")
+                    Text("Перетаскивай пальцем. Двойной тап по предмету — удалить. Тап по персонажу — карточка.")
                         .font(.system(size: 11, weight: .medium, design: .rounded))
                         .foregroundColor(.white)
                         .multilineTextAlignment(.center)
@@ -164,7 +163,6 @@ struct LocationView: View {
     }
 
     func addItemToScene(catalog: CatalogItem) {
-        // Позиция в центре + случайный сдвиг
         let size = UIScreen.main.bounds.size
         let placed = PlacedItem(
             catalogID: catalog.id,
@@ -178,7 +176,6 @@ struct LocationView: View {
         if let placed = worldStore.positions(for: location).first(where: { $0.playerID == player.id }) {
             return CGPoint(x: placed.x, y: placed.y)
         }
-        // Дефолтная позиция — по центру внизу
         return CGPoint(x: size.width / 2, y: size.height * 0.7)
     }
 }
