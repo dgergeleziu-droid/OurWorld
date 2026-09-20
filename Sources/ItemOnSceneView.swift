@@ -6,15 +6,14 @@ struct ItemOnSceneView: View {
 
     var body: some View {
         ZStack {
-            // Тень
             Ellipse()
                 .fill(Color.black.opacity(0.15))
                 .frame(width: catalog.size * 0.7, height: catalog.size * 0.15)
                 .offset(y: catalog.size * 0.4)
 
-            // Картинка или эмодзи
-            if let imageName = catalog.imageName {
-                Image(imageName)
+            if let imageName = catalog.imageName,
+               let uiImage = UIImage(named: imageName) {
+                Image(uiImage: uiImage)
                     .resizable()
                     .scaledToFit()
                     .frame(width: catalog.size, height: catalog.size)
