@@ -2,15 +2,27 @@ import SwiftUI
 
 @main
 struct OurWorldApp: App {
-    @StateObject private var characterStore = CharacterStore()
-    @StateObject private var worldStore = WorldStore()
+    @State private var showSplash = true
 
     var body: some Scene {
         WindowGroup {
-            MapView()
-                .environmentObject(characterStore)
-                .environmentObject(worldStore)
-                .preferredColorScheme(.light)
+            ZStack {
+                if showSplash {
+                    SplashView()
+                        .transition(.opacity)
+                } else {
+                    MainMenuView()
+                        .environmentObject(CharacterStore())
+                }
+            }
+            .onAppear {
+                // Показываем заставку 2 секунды, потом плавно убираем
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                    withAnimation(.easeInOut(duration: 0.6)) {
+                        showSplash = false
+                    }
+                }
+            }
         }
     }
 }
