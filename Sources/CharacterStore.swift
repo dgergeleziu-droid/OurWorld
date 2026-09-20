@@ -32,10 +32,11 @@ class CharacterStore: ObservableObject {
         save()
     }
 
+    /// Один раз добавляет Аню при первом запуске
     private func seedDefaultCharacterIfNeeded() {
-        // Если ещё ни разу не добавляли — создаём Аню
         let didSeed = UserDefaults.standard.bool(forKey: didSeedKey)
         guard !didSeed else { return }
+
         guard players.isEmpty else {
             UserDefaults.standard.set(true, forKey: didSeedKey)
             return
