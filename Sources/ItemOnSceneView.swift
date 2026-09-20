@@ -6,13 +6,12 @@ struct ItemOnSceneView: View {
 
     var body: some View {
         ZStack {
-            // Тень под предметом
+            // Тень
             Ellipse()
                 .fill(Color.black.opacity(0.15))
                 .frame(width: catalog.size * 0.7, height: catalog.size * 0.15)
                 .offset(y: catalog.size * 0.4)
 
-            // Картинка, если есть; иначе — emoji
             if let imageName = catalog.imageName {
                 Image(imageName)
                     .resizable()
@@ -23,6 +22,8 @@ struct ItemOnSceneView: View {
                     .font(.system(size: catalog.size * 0.7))
             }
         }
+        .frame(width: catalog.size, height: catalog.size)  // ← важно: задаёт область нажатия
+        .contentShape(Rectangle())                          // ← важно: делает всю область кликабельной
         .scaleEffect(isDragging ? 1.15 : 1.0)
         .animation(.spring(response: 0.25, dampingFraction: 0.7), value: isDragging)
     }
