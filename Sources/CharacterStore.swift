@@ -4,11 +4,9 @@ import Foundation
 class CharacterStore: ObservableObject {
     @Published var players: [Player] = []
 
-    private let playersKey = "ourworld.players.v2"
+    private let playersKey = "ourworld.players.v3"
 
-    init() {
-        load()
-    }
+    init() { load() }
 
     func add(_ player: Player) {
         players.append(player)
@@ -23,7 +21,6 @@ class CharacterStore: ObservableObject {
     }
 
     func delete(_ player: Player) {
-        // Удаляем голосовой файл
         if let voice = player.voiceFileName {
             AudioManager.shared.deleteVoice(fileName: voice)
         }
