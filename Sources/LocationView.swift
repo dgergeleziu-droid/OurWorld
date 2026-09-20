@@ -1,195 +1,274 @@
 import SwiftUI
 
 struct LocationView: View {
-    @EnvironmentObject var characterStore: CharacterStore
-    @EnvironmentObject var worldStore: WorldStore
+
     let location: LocationID
 
-    @State private var showCatalog = false
-    @State private var draggingItemID: UUID? = nil
-    @State private var draggingPlayerID: UUID? = nil
-    @State private var dragOffset: CGSize = .zero
-    @State private var initialPosition: CGPoint = .zero
-    @State private var showCharactersPicker = false
-    @State private var showSelectedPlayerSheet: Player? = nil
-    @State private var snackbarMessage: String? = nil
+    @EnvironmentObject var worldStore: WorldStore
+    @EnvironmentObject var characterStore: CharacterStore
+    @Environment(\.dismiss) private var dismiss
 
-    private let playerSize: CGFloat = 180
+    @State private var showCatalog = false
+    @State private var showCharacters = false
+    @State private var snackbar: String? = nil
+    @State private var selectedPlayer: Player? = nil
+
+    private var floorZone: FloorZone { LocationBackground.floorZone }
 
     var body: some View {
         GeometryReader { geo in
             ZStack {
+
+                // === Фон локации (изометрия) ===
                 LocationBackground(location: location)
-                    .opacity(0.98)
 
-                // Предметы с анимацией появления
-                ForEach(Array(worldStore.items(for: location).enumerated()), id: \.element.id) { index, item in
-                    if let catalog = ItemCatalog.item(byID: item.catalogID) {
-                        ItemOnSceneView(catalog: catalog, isDragging: draggingItemID == item.id)
-                            .position(
-                                x: item.x + (draggingItemID == item.id ? dragOffset.width : 0),
-                                y: item.y + (draggingItemID == item.id ? dragOffset.height : 0)
-                            )
-                            .gesture(
-                                DragGesture(minimumDistance: 10)
-                                    .onChanged { v in
-                                        if draggingItemID == nil {
-                                            draggingItemID = item.id
-                                            initialPosition = CGPoint(x: item.x, y: item.y)
-                                        }
-                                        dragOffset = v.translation
-                                    }
-                                    .onEnded { v in
-                                        var upd = item
-                                        upd.x = initialPosition.x + v.translation.width
-                                        upd.y = initialPosition.y + v.translation.height
-                                        worldStore.updateItem(upd, in: location)
-                                        draggingItemID = nil
-                                        dragOffset = .zero
-                                    }
-                            )
-                            .onTapGesture(count: 2) {
-                                withAnimation(AppAnimation.fadeExit) {
-                                    worldStore.removeItem(item, in: location)
-                                }
-                                showSnackbar("Удалено: \(catalog.name)")
+                // === Предметы на полу ===
+                ForEach(worldStore.items(in: location)) { item in
+                    DraggableItem(
+                        item: item,
+                        geoSize: geo.size,
+                        floorZone: floorZone,
+                        onMove: { x, y in
+                            worldStore.moveItem(item, x: x, y: y)
+                        },
+                        onDelete: {
+                            withAnimation(AppAnimation.fade) {
+                                worldStore.removeItem(item)
                             }
-                            .fadeScaleEnter()
+                            showSnackbar("Предмет удалён")
+                        }
+                    )
+                }
+
+                // === Персонажи на полу ===
+                ForEach(worldStore.players(in: location)) { placed in
+                    if let player = characterStore.player(by: placed.playerID) {
+                        DraggablePlayer(
+                            placed: placed,
+                            player: player,
+                            geoSize: geo.size,
+                            floorZone: floorZone,
+                            onMove: { x, y in
+                                worldStore.movePlayer(placed, x: x, y: y)
+                            },
+                            onTap: {
+                                selectedPlayer = player
+                            }
+                        )
                     }
                 }
 
-                // Персонажи
-                ForEach(characterStore.players) { player in
-                    let pos = position(for: player, in: geo.size)
-                    AvatarView(player: player, size: playerSize, isDragging: draggingPlayerID == player.id)
-                        .position(
-                            x: pos.x + (draggingPlayerID == player.id ? dragOffset.width : 0),
-                            y: pos.y + (draggingPlayerID == player.id ? dragOffset.height : 0)
-                        )
-                        .gesture(
-                            DragGesture(minimumDistance: 10)
-                                .onChanged { v in
-                                    if draggingPlayerID == nil {
-                                        draggingPlayerID = player.id
-                                        initialPosition = pos
-                                    }
-                                    dragOffset = v.translation
-                                }
-                                .onEnded { v in
-                                    let newX = initialPosition.x + v.translation.width
-                                    let newY = initialPosition.y + v.translation.height
-                                    let placed = PlacedPlayer(playerID: player.id,
-                                                              locationRaw: location.rawValue,
-                                                              x: newX, y: newY)
-                                    worldStore.setPosition(placed, in: location)
-                                    draggingPlayerID = nil
-                                    dragOffset = .zero
-                                }
-                        )
-                        .onTapGesture(count: 1) {
-                            if let voice = player.voiceFileName {
-                                AudioManager.shared.playVoice(fileName: voice)
-                            }
-                            showSelectedPlayerSheet = player
-                        }
-                        .fadeScaleEnter()
-                }
+                // === Верхний бар ===
+                topBar
 
-                // Верхняя панель
-                VStack {
-                    HStack(spacing: 10) {
-                        Spacer()
-                        Button { showCharactersPicker = true } label: {
-                            HStack(spacing: 5) {
-                                Image(systemName: "person.2.fill")
-                                Text("\(characterStore.players.count)")
-                            }
-                            .font(.system(size: 14, weight: .bold, design: .rounded))
-                            .foregroundColor(Color(hex: "#111827"))
-                            .padding(.horizontal, 14).padding(.vertical, 10)
-                            .background(Capsule().fill(.white))
-                            .shadow(color: .black.opacity(0.12), radius: 6, y: 3)
-                        }
-                        .buttonStyle(BounceButtonStyle())
+                // === Нижние кнопки ===
+                bottomBar
 
-                        Button { showCatalog = true } label: {
-                            HStack(spacing: 5) {
-                                Image(systemName: "plus.circle.fill")
-                                Text("Предмет")
-                            }
-                            .font(.system(size: 14, weight: .bold, design: .rounded))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 14).padding(.vertical, 10)
-                            .background(Capsule().fill(Color(hex: "#3B82F6")))
-                            .shadow(color: Color(hex: "#3B82F6").opacity(0.4), radius: 6, y: 3)
-                        }
-                        .buttonStyle(BounceButtonStyle())
-                    }
-                    .padding(.horizontal, 16).padding(.top, 8)
-                    Spacer()
-                }
-
-                // ===== SNACKBAR внизу (design_snackbar_in) =====
-                if let msg = snackbarMessage {
+                // === Snackbar ===
+                if let snackbar {
                     VStack {
                         Spacer()
-                        Text(msg)
-                            .font(.system(size: 14, weight: .semibold, design: .rounded))
+                        Text(snackbar)
+                            .font(.system(size: 15, weight: .semibold, design: .rounded))
                             .foregroundColor(.white)
-                            .padding(.horizontal, 20).padding(.vertical, 12)
-                            .background(Capsule().fill(Color.black.opacity(0.85)))
-                            .shadow(color: .black.opacity(0.3), radius: 10, y: 4)
-                            .padding(.bottom, 30)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 12)
+                            .background(Color.black.opacity(0.8))
+                            .clipShape(Capsule())
+                            .padding(.bottom, 90)
                     }
                     .transition(.move(edge: .bottom).combined(with: .opacity))
-                    .zIndex(10)
                 }
             }
         }
-        .navigationTitle(location.rawValue)
-        .navigationBarTitleDisplayMode(.inline)
+        .ignoresSafeArea(.keyboard)
+        .navigationBarBackButtonHidden(true)
         .sheet(isPresented: $showCatalog) {
-            ItemCatalogView(location: location) { catalog in
-                addItemToScene(catalog: catalog)
+            ItemCatalogView { item in
+                let c = floorZone.center
+                worldStore.addItem(item, at: c.x, y: c.y, in: location)
+                showSnackbar("\(item.name) добавлен")
             }
-            .environmentObject(worldStore)
         }
-        .sheet(isPresented: $showCharactersPicker) {
-            CharacterListSheet().environmentObject(characterStore)
+        .sheet(isPresented: $showCharacters) {
+            CharacterListSheet(location: location)
         }
-        .sheet(item: $showSelectedPlayerSheet) { p in
-            PlayerDetailView(player: p).environmentObject(characterStore)
+        .sheet(item: $selectedPlayer) { player in
+            PlayerDetailView(player: player)
         }
     }
 
-    func addItemToScene(catalog: CatalogItem) {
-        let size = UIScreen.main.bounds.size
-        let placed = PlacedItem(
-            catalogID: catalog.id,
-            x: Double(size.width / 2 + CGFloat.random(in: -60...60)),
-            y: Double(size.height / 2 + CGFloat.random(in: -80...80))
-        )
-        withAnimation(AppAnimation.fadeEnter) {
-            worldStore.addItem(placed, to: location)
+    // MARK: - Верхний бар
+
+    private var topBar: some View {
+        VStack {
+            HStack {
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.title3.bold())
+                        .foregroundColor(Color(hex: "#111827"))
+                        .frame(width: 44, height: 44)
+                        .background(.white.opacity(0.92))
+                        .clipShape(Circle())
+                        .shadow(color: .black.opacity(0.1), radius: 6)
+                }
+
+                Text(location.rawValue)
+                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .foregroundColor(Color(hex: "#111827"))
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 10)
+                    .background(.white.opacity(0.92))
+                    .clipShape(Capsule())
+                    .shadow(color: .black.opacity(0.1), radius: 6)
+
+                Spacer()
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 12)
+
+            Spacer()
         }
-        showSnackbar("Добавлено: \(catalog.name)")
     }
 
-    func showSnackbar(_ message: String) {
+    // MARK: - Нижние кнопки
+
+    private var bottomBar: some View {
+        VStack {
+            Spacer()
+            HStack(spacing: 12) {
+                Button {
+                    showCatalog = true
+                } label: {
+                    Label("Предмет", systemImage: "plus")
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .foregroundColor(Color(hex: "#111827"))
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 12)
+                        .background(.white.opacity(0.92))
+                        .clipShape(Capsule())
+                        .shadow(color: .black.opacity(0.12), radius: 8)
+                }
+
+                Button {
+                    showCharacters = true
+                } label: {
+                    Label(
+                        "Персонажи (\(worldStore.players(in: location).count))",
+                        systemImage: "person.2.fill"
+                    )
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .foregroundColor(Color(hex: "#111827"))
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 12)
+                    .background(.white.opacity(0.92))
+                    .clipShape(Capsule())
+                    .shadow(color: .black.opacity(0.12), radius: 8)
+                }
+
+                Spacer()
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 16)
+        }
+    }
+
+    // MARK: - Snackbar
+
+    private func showSnackbar(_ text: String) {
         withAnimation(AppAnimation.snackbar) {
-            snackbarMessage = message
+            snackbar = text
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
-            withAnimation(AppAnimation.fadeExit) {
-                snackbarMessage = nil
+            withAnimation(AppAnimation.snackbar) {
+                snackbar = nil
             }
         }
     }
+}
 
-    func position(for player: Player, in size: CGSize) -> CGPoint {
-        if let placed = worldStore.positions(for: location).first(where: { $0.playerID == player.id }) {
-            return CGPoint(x: placed.x, y: placed.y)
-        }
-        return CGPoint(x: size.width / 2, y: size.height * 0.65)
+// MARK: - Перетаскиваемый предмет
+private struct DraggableItem: View {
+    let item: PlacedItem
+    let geoSize: CGSize
+    let floorZone: FloorZone
+    let onMove: (Double, Double) -> Void
+    let onDelete: () -> Void
+
+    @State private var dragOffset: CGSize = .zero
+    @State private var dragging: Bool = false
+
+    var body: some View {
+        ItemOnSceneView(item: item)
+            .position(
+                x: CGFloat(item.x) * geoSize.width + dragOffset.width,
+                y: CGFloat(item.y) * geoSize.height + dragOffset.height
+            )
+            .gesture(
+                DragGesture()
+                    .onChanged { value in
+                        dragging = true
+                        dragOffset = value.translation
+                    }
+                    .onEnded { value in
+                        let newX = (CGFloat(item.x) * geoSize.width + value.translation.width) / geoSize.width
+                        let newY = (CGFloat(item.y) * geoSize.height + value.translation.height) / geoSize.height
+                        let c = floorZone.clamp(x: Double(newX), y: Double(newY))
+                        onMove(c.x, c.y)
+                        dragOffset = .zero
+                        dragging = false
+                    }
+            )
+            .onTapGesture(count: 2) {
+                onDelete()
+            }
+            .scaleEffect(dragging ? 1.08 : 1.0)
+            .zIndex(dragging ? 100 : 0)
+            .animation(AppAnimation.tap, value: dragging)
+    }
+}
+
+// MARK: - Перетаскиваемый персонаж
+private struct DraggablePlayer: View {
+    let placed: PlacedPlayer
+    let player: Player
+    let geoSize: CGSize
+    let floorZone: FloorZone
+    let onMove: (Double, Double) -> Void
+    let onTap: () -> Void
+
+    @State private var dragOffset: CGSize = .zero
+    @State private var dragging: Bool = false
+
+    var body: some View {
+        AvatarView(player: player)
+            .frame(width: 180, height: 180)
+            .position(
+                x: CGFloat(placed.x) * geoSize.width + dragOffset.width,
+                y: CGFloat(placed.y) * geoSize.height + dragOffset.height
+            )
+            .gesture(
+                DragGesture(minimumDistance: 6)
+                    .onChanged { value in
+                        dragging = true
+                        dragOffset = value.translation
+                    }
+                    .onEnded { value in
+                        let newX = (CGFloat(placed.x) * geoSize.width + value.translation.width) / geoSize.width
+                        let newY = (CGFloat(placed.y) * geoSize.height + value.translation.height) / geoSize.height
+                        let c = floorZone.clamp(x: Double(newX), y: Double(newY))
+                        onMove(c.x, c.y)
+                        dragOffset = .zero
+                        dragging = false
+                    }
+            )
+            .onTapGesture {
+                if !dragging { onTap() }
+            }
+            .scaleEffect(dragging ? 1.05 : 1.0)
+            .zIndex(dragging ? 100 : 0)
+            .animation(AppAnimation.tap, value: dragging)
     }
 }
