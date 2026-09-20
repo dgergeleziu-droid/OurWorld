@@ -14,11 +14,12 @@ struct ItemCatalogView: View {
                 Color(hex: "#FDF6EC").ignoresSafeArea()
 
                 VStack(spacing: 0) {
+                    // Категории
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 10) {
                             ForEach(ItemCategory.allCases, id: \.self) { cat in
                                 Button {
-                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                    withAnimation(AppAnimation.fadeEnter) {
                                         selectedCategory = cat
                                     }
                                 } label: {
@@ -26,22 +27,29 @@ struct ItemCatalogView: View {
                                         .font(.system(size: 14, weight: .semibold, design: .rounded))
                                         .foregroundColor(selectedCategory == cat ? .white : Color(hex: "#4B5563"))
                                         .padding(.horizontal, 16).padding(.vertical, 10)
-                                        .background(Capsule().fill(selectedCategory == cat ? Color(hex: "#3B82F6") : Color.white))
+                                        .background(Capsule().fill(
+                                            selectedCategory == cat
+                                                ? Color(hex: "#3B82F6")
+                                                : Color.white))
                                         .shadow(color: .black.opacity(0.05), radius: 3, y: 2)
+                                        .scaleEffect(selectedCategory == cat ? 1.05 : 1.0)
                                 }
+                                .buttonStyle(BounceButtonStyle())
                             }
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
+                        .padding(.horizontal, 16).padding(.vertical, 12)
                     }
 
+                    // Сетка предметов
                     ScrollView {
                         LazyVGrid(columns: [
                             GridItem(.flexible(), spacing: 12),
                             GridItem(.flexible(), spacing: 12),
                             GridItem(.flexible(), spacing: 12)
                         ], spacing: 12) {
-                            ForEach(ItemCatalog.all.filter { $0.category == selectedCategory }) { item in
+                            ForEach(Array(ItemCatalog.all
+                                .filter { $0.category == selectedCategory }
+                                .enumerated()), id: \.element.id) { index, item in
                                 Button {
                                     onSelect(item)
                                     dismiss()
@@ -58,7 +66,6 @@ struct ItemCatalogView: View {
                                                 .font(.system(size: 44))
                                                 .frame(height: 60)
                                         }
-
                                         Text(item.name)
                                             .font(.system(size: 11, weight: .medium, design: .rounded))
                                             .foregroundColor(Color(hex: "#374151"))
@@ -69,7 +76,8 @@ struct ItemCatalogView: View {
                                     .background(RoundedRectangle(cornerRadius: 14).fill(Color.white))
                                     .shadow(color: .black.opacity(0.05), radius: 4, y: 2)
                                 }
-                                .buttonStyle(.plain)
+                                .buttonStyle(BounceButtonStyle())
+                                .staggered(index: index)
                             }
                         }
                         .padding(.horizontal, 16)
