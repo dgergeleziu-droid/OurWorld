@@ -64,10 +64,9 @@ struct Player: Identifiable, Codable, Hashable {
     var voiceFileName: String?
 
     // Если задано — показываем эту картинку вместо нарисованного персонажа
-    // Пример: "anya" → Image("anya")
     var imageName: String?
 
-    // Внешность (используется, если imageName == nil)
+    // Внешность (для нарисованных персонажей)
     var skinTone: Int
     var hairStyle: Int
     var hairColor: Int
