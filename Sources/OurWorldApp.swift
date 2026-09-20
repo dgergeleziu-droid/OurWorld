@@ -13,12 +13,13 @@ struct OurWorldApp: App {
                 } else {
                     MainMenuView()
                         .environmentObject(CharacterStore())
+                        .transition(.opacity)
                 }
             }
             .onAppear {
-                // Показываем заставку 2 секунды, потом плавно убираем
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                    withAnimation(.easeInOut(duration: 0.6)) {
+                // Заставка держится 2.5 секунды, потом плавно исчезает
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+                    withAnimation(.easeInOut(duration: 0.8)) {
                         showSplash = false
                     }
                 }
