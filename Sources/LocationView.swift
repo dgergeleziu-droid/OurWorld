@@ -12,6 +12,7 @@ struct LocationView: View {
     @State private var initialPosition: CGPoint = .zero
     @State private var showCharactersPicker = false
     @State private var showSelectedPlayerSheet: Player? = nil
+    @State private var snackbarMessage: String? = nil
 
     private let playerSize: CGFloat = 180
 
@@ -19,9 +20,10 @@ struct LocationView: View {
         GeometryReader { geo in
             ZStack {
                 LocationBackground(location: location)
+                    .opacity(0.98)
 
-                // Предметы
-                ForEach(worldStore.items(for: location)) { item in
+                // Предметы с анимацией появления
+                ForEach(Array(worldStore.items(for: location).enumerated()), id: \.element.id) { index, item in
                     if let catalog = ItemCatalog.item(byID: item.catalogID) {
                         ItemOnSceneView(catalog: catalog, isDragging: draggingItemID == item.id)
                             .position(
@@ -47,12 +49,16 @@ struct LocationView: View {
                                     }
                             )
                             .onTapGesture(count: 2) {
-                                worldStore.removeItem(item, in: location)
+                                withAnimation(AppAnimation.fadeExit) {
+                                    worldStore.removeItem(item, in: location)
+                                }
+                                showSnackbar("Удалено: \(catalog.name)")
                             }
+                            .fadeScaleEnter()
                     }
                 }
 
-                // Персонажи (только те, кто в этой локации + новые)
+                // Персонажи
                 ForEach(characterStore.players) { player in
                     let pos = position(for: player, in: geo.size)
                     AvatarView(player: player, size: playerSize, isDragging: draggingPlayerID == player.id)
@@ -86,8 +92,10 @@ struct LocationView: View {
                             }
                             showSelectedPlayerSheet = player
                         }
+                        .fadeScaleEnter()
                 }
 
+                // Верхняя панель
                 VStack {
                     HStack(spacing: 10) {
                         Spacer()
@@ -102,6 +110,8 @@ struct LocationView: View {
                             .background(Capsule().fill(.white))
                             .shadow(color: .black.opacity(0.12), radius: 6, y: 3)
                         }
+                        .buttonStyle(BounceButtonStyle())
+
                         Button { showCatalog = true } label: {
                             HStack(spacing: 5) {
                                 Image(systemName: "plus.circle.fill")
@@ -113,15 +123,26 @@ struct LocationView: View {
                             .background(Capsule().fill(Color(hex: "#3B82F6")))
                             .shadow(color: Color(hex: "#3B82F6").opacity(0.4), radius: 6, y: 3)
                         }
+                        .buttonStyle(BounceButtonStyle())
                     }
                     .padding(.horizontal, 16).padding(.top, 8)
                     Spacer()
-                    Text("Тапни по персонажу — карточка. Двойной тап по предмету — удалить.")
-                        .font(.system(size: 11, weight: .medium, design: .rounded))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 14).padding(.vertical, 8)
-                        .background(Color.black.opacity(0.55))
-                        .cornerRadius(16).padding(.bottom, 20)
+                }
+
+                // ===== SNACKBAR внизу (design_snackbar_in) =====
+                if let msg = snackbarMessage {
+                    VStack {
+                        Spacer()
+                        Text(msg)
+                            .font(.system(size: 14, weight: .semibold, design: .rounded))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 20).padding(.vertical, 12)
+                            .background(Capsule().fill(Color.black.opacity(0.85)))
+                            .shadow(color: .black.opacity(0.3), radius: 10, y: 4)
+                            .padding(.bottom, 30)
+                    }
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .zIndex(10)
                 }
             }
         }
@@ -130,7 +151,8 @@ struct LocationView: View {
         .sheet(isPresented: $showCatalog) {
             ItemCatalogView(location: location) { catalog in
                 addItemToScene(catalog: catalog)
-            }.environmentObject(worldStore)
+            }
+            .environmentObject(worldStore)
         }
         .sheet(isPresented: $showCharactersPicker) {
             CharacterListSheet().environmentObject(characterStore)
@@ -147,7 +169,21 @@ struct LocationView: View {
             x: Double(size.width / 2 + CGFloat.random(in: -60...60)),
             y: Double(size.height / 2 + CGFloat.random(in: -80...80))
         )
-        worldStore.addItem(placed, to: location)
+        withAnimation(AppAnimation.fadeEnter) {
+            worldStore.addItem(placed, to: location)
+        }
+        showSnackbar("Добавлено: \(catalog.name)")
+    }
+
+    func showSnackbar(_ message: String) {
+        withAnimation(AppAnimation.snackbar) {
+            snackbarMessage = message
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
+            withAnimation(AppAnimation.fadeExit) {
+                snackbarMessage = nil
+            }
+        }
     }
 
     func position(for player: Player, in size: CGSize) -> CGPoint {
