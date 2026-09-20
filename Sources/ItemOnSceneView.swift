@@ -12,7 +12,7 @@ struct ItemOnSceneView: View {
                 .frame(width: catalog.size * 0.7, height: catalog.size * 0.15)
                 .offset(y: catalog.size * 0.4)
 
-            // Картинка или emoji
+            // Картинка или эмодзи
             if let imageName = catalog.imageName {
                 Image(imageName)
                     .resizable()
