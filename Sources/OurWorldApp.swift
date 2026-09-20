@@ -2,12 +2,14 @@ import SwiftUI
 
 @main
 struct OurWorldApp: App {
-    @StateObject private var store = CharacterStore()
+    @StateObject private var characterStore = CharacterStore()
+    @StateObject private var worldStore = WorldStore()
 
     var body: some Scene {
         WindowGroup {
-            MainMenuView()
-                .environmentObject(store)
+            MapView()
+                .environmentObject(characterStore)
+                .environmentObject(worldStore)
                 .preferredColorScheme(.light)
         }
     }
