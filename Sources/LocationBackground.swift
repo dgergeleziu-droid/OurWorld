@@ -13,6 +13,7 @@ struct LocationBackground: View {
             case .shop:     shopBackground
             case .hospital: hospitalBackground
             case .school:   schoolBackground
+            case .space:    spaceBackground
             }
         }
         .ignoresSafeArea()
@@ -210,6 +211,21 @@ struct LocationBackground: View {
                         .stroke(Color(hex: "#8B5A2B"), lineWidth: 10)
                 )
                 .offset(y: -50)
+        }
+    }
+
+    // MARK: - Космос
+    private var spaceBackground: some View {
+        ZStack {
+            LinearGradient(
+                colors: [Color(hex: "#0B0B2B"), Color(hex: "#2A1A5E")],
+                startPoint: .top, endPoint: .bottom
+            )
+            Circle()
+                .fill(Color(hex: "#F0E9C8"))
+                .frame(width: 110, height: 110)
+                .offset(x: 240, y: -150)
+                .shadow(color: .white.opacity(0.4), radius: 30)
         }
     }
 }
