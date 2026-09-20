@@ -12,7 +12,6 @@ class AudioManager: NSObject, ObservableObject {
     private var player: AVAudioPlayer?
     private var timer: Timer?
 
-    // MARK: - Разрешение
     func requestPermission(completion: @escaping (Bool) -> Void) {
         AVAudioSession.sharedInstance().requestRecordPermission { granted in
             DispatchQueue.main.async {
@@ -22,16 +21,12 @@ class AudioManager: NSObject, ObservableObject {
         }
     }
 
-    // MARK: - Начать запись
     func startRecording(fileName: String) -> Bool {
         let session = AVAudioSession.sharedInstance()
         do {
             try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker])
             try session.setActive(true)
-        } catch {
-            print("Audio session error: \(error)")
-            return false
-        }
+        } catch { return false }
 
         let url = fileURL(for: fileName)
 
@@ -53,23 +48,19 @@ class AudioManager: NSObject, ObservableObject {
             }
             return true
         } catch {
-            print("Record error: \(error)")
             return false
         }
     }
 
-    // MARK: - Остановить запись
     func stopRecording() {
         recorder?.stop()
         recorder = nil
         timer?.invalidate()
         timer = nil
         isRecording = false
-
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
     }
 
-    // MARK: - Воспроизведение
     func playVoice(fileName: String) {
         let url = fileURL(for: fileName)
         guard FileManager.default.fileExists(atPath: url.path) else { return }
@@ -80,18 +71,17 @@ class AudioManager: NSObject, ObservableObject {
             player = try AVAudioPlayer(contentsOf: url)
             player?.delegate = self
             player?.play()
-        } catch {
-            print("Play error: \(error)")
-        }
+        } catch { }
     }
 
-    // MARK: - Удалить файл
     func deleteVoice(fileName: String) {
-        let url = fileURL(for: fileName)
-        try? FileManager.default.removeItem(at: url)
+        try? FileManager.default.removeItem(at: fileURL(for: fileName))
     }
 
-    // MARK: - URL
+    func voiceExists(fileName: String) -> Bool {
+        FileManager.default.fileExists(atPath: fileURL(for: fileName).path)
+    }
+
     private func fileURL(for fileName: String) -> URL {
         let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         return docs.appendingPathComponent(fileName)
