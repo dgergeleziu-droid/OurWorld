@@ -1,5 +1,6 @@
 import SwiftUI
 
+// MARK: - HEX → Color
 extension Color {
     init(hex: String) {
         let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
@@ -22,45 +23,7 @@ extension Color {
     }
 }
 
-struct Player: Identifiable, Codable, Equatable {
-    let id: UUID
-    var name: String
-    var skinColorIndex: Int
-    var hairColorIndex: Int
-    var hairStyleIndex: Int
-    var clothesColorIndex: Int
-    var clothesStyleIndex: Int
-    var eyeColorIndex: Int
-    var voiceFileName: String?
-
-    init(id: UUID = UUID(),
-         name: String = "Персонаж",
-         skinColorIndex: Int = 1,
-         hairColorIndex: Int = 1,
-         hairStyleIndex: Int = 0,
-         clothesColorIndex: Int = 1,
-         clothesStyleIndex: Int = 0,
-         eyeColorIndex: Int = 0,
-         voiceFileName: String? = nil) {
-        self.id = id
-        self.name = name
-        self.skinColorIndex = skinColorIndex
-        self.hairColorIndex = hairColorIndex
-        self.hairStyleIndex = hairStyleIndex
-        self.clothesColorIndex = clothesColorIndex
-        self.clothesStyleIndex = clothesStyleIndex
-        self.eyeColorIndex = eyeColorIndex
-        self.voiceFileName = voiceFileName
-    }
-}
-
-enum Palette {
-    static let skinColors = ["#FFE8D6", "#FFD5B5", "#F1C27D", "#E0AC69", "#C68642", "#8D5524", "#6B4226"]
-    static let hairColors = ["#2C1810", "#4A3124", "#8B4513", "#D2A679", "#FFD700", "#E91E63", "#9C27B0", "#00BCD4", "#4CAF50", "#F44336"]
-    static let clothesColors = ["#EF4444", "#F97316", "#FBBF24", "#22C55E", "#14B8A6", "#3B82F6", "#8B5CF6", "#EC4899", "#0F172A", "#FFFFFF"]
-    static let eyeColors = ["#2C1810", "#3B82F6", "#22C55E", "#8B4513", "#7C3AED", "#EC4899"]
-}
-
+// MARK: - Локации
 enum LocationID: String, CaseIterable, Identifiable, Codable {
     case home = "Дом"
     case cafe = "Кафе"
@@ -77,7 +40,7 @@ enum LocationID: String, CaseIterable, Identifiable, Codable {
         case .cafe: return "cup.and.saucer.fill"
         case .park: return "tree.fill"
         case .beach: return "beach.umbrella.fill"
-        case .space: return "moon.stars.fill"
+        case .space: return "sparkles"
         case .hospital: return "cross.case.fill"
         }
     }
@@ -85,35 +48,116 @@ enum LocationID: String, CaseIterable, Identifiable, Codable {
     var color: String {
         switch self {
         case .home: return "#F59E0B"
-        case .cafe: return "#92400E"
+        case .cafe: return "#B45309"
         case .park: return "#22C55E"
-        case .beach: return "#0EA5E9"
+        case .beach: return "#38BDF8"
         case .space: return "#6366F1"
         case .hospital: return "#EF4444"
         }
     }
 }
 
-// Предмет, который можно положить на сцену
-struct PlacedItem: Identifiable, Codable, Equatable {
-    let id: UUID
+// MARK: - Персонаж
+struct Player: Identifiable, Codable, Hashable {
+    var id: UUID
+    var name: String
+    var voiceFileName: String?
+
+    // Внешность — индексы в палитрах
+    var skinTone: Int
+    var hairStyle: Int
+    var hairColor: Int
+    var eyeStyle: Int
+    var eyeColor: Int
+    var mouthStyle: Int
+    var outfitStyle: Int
+    var outfitColor: Int
+    var accessory: Int
+
+    init(
+        id: UUID = UUID(),
+        name: String = "",
+        voiceFileName: String? = nil,
+        skinTone: Int = 1,
+        hairStyle: Int = 0,
+        hairColor: Int = 1,
+        eyeStyle: Int = 0,
+        eyeColor: Int = 0,
+        mouthStyle: Int = 0,
+        outfitStyle: Int = 0,
+        outfitColor: Int = 0,
+        accessory: Int = 0
+    ) {
+        self.id = id
+        self.name = name
+        self.voiceFileName = voiceFileName
+        self.skinTone = skinTone
+        self.hairStyle = hairStyle
+        self.hairColor = hairColor
+        self.eyeStyle = eyeStyle
+        self.eyeColor = eyeColor
+        self.mouthStyle = mouthStyle
+        self.outfitStyle = outfitStyle
+        self.outfitColor = outfitColor
+        self.accessory = accessory
+    }
+
+    // Кастомный декодер: если старые сохранения без новых полей — подставляем дефолты
+    enum CodingKeys: String, CodingKey {
+        case id, name, voiceFileName
+        case skinTone, hairStyle, hairColor
+        case eyeStyle, eyeColor, mouthStyle
+        case outfitStyle, outfitColor, accessory
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        name = try c.decodeIfPresent(String.self, forKey: .name) ?? "Друг"
+        voiceFileName = try c.decodeIfPresent(String.self, forKey: .voiceFileName)
+        skinTone = try c.decodeIfPresent(Int.self, forKey: .skinTone) ?? 1
+        hairStyle = try c.decodeIfPresent(Int.self, forKey: .hairStyle) ?? 0
+        hairColor = try c.decodeIfPresent(Int.self, forKey: .hairColor) ?? 1
+        eyeStyle = try c.decodeIfPresent(Int.self, forKey: .eyeStyle) ?? 0
+        eyeColor = try c.decodeIfPresent(Int.self, forKey: .eyeColor) ?? 0
+        mouthStyle = try c.decodeIfPresent(Int.self, forKey: .mouthStyle) ?? 0
+        outfitStyle = try c.decodeIfPresent(Int.self, forKey: .outfitStyle) ?? 0
+        outfitColor = try c.decodeIfPresent(Int.self, forKey: .outfitColor) ?? 0
+        accessory = try c.decodeIfPresent(Int.self, forKey: .accessory) ?? 0
+    }
+}
+
+// MARK: - Предмет на сцене
+struct PlacedItem: Identifiable, Codable, Hashable {
+    var id: UUID
     var catalogID: String
     var x: Double
     var y: Double
-    var scale: Double
 
-    init(id: UUID = UUID(), catalogID: String, x: Double, y: Double, scale: Double = 1.0) {
+    init(id: UUID = UUID(), catalogID: String, x: Double, y: Double) {
         self.id = id
         self.catalogID = catalogID
         self.x = x
         self.y = y
-        self.scale = scale
     }
 }
 
-// Позиция персонажа на сцене
-struct PlacedPlayer: Codable, Equatable {
+// MARK: - Позиция персонажа на сцене
+struct PlacedPlayer: Identifiable, Codable, Hashable {
+    var id: UUID
     var playerID: UUID
     var x: Double
     var y: Double
+
+    init(id: UUID = UUID(), playerID: UUID, x: Double, y: Double) {
+        self.id = id
+        self.playerID = playerID
+        self.x = x
+        self.y = y
+    }
+}
+
+// MARK: - Базовая палитра (расширяется в Appearance.swift)
+enum Palette {
+    // Цвета и стили добавляются в extension Palette в файле Appearance.swift
 }
