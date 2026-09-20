@@ -17,10 +17,9 @@ struct LocationView: View {
     var body: some View {
         GeometryReader { geo in
             ZStack {
-                // Фон локации
                 LocationBackground(location: location)
 
-                // === Предметы ===
+                // Предметы
                 ForEach(worldStore.items(for: location)) { item in
                     if let catalog = catalogItem(for: item.catalogID) {
                         DraggableItem(
@@ -44,7 +43,7 @@ struct LocationView: View {
                     }
                 }
 
-                // === Персонажи ===
+                // Персонажи
                 ForEach(worldStore.positions(for: location)) { placed in
                     if let player = characterStore.player(by: placed.playerID) {
                         DraggablePlayer(
@@ -69,13 +68,9 @@ struct LocationView: View {
                     }
                 }
 
-                // === Верхний бар ===
                 topBar
-
-                // === Нижние кнопки ===
                 bottomBar
 
-                // === Snackbar ===
                 if let snackbar {
                     VStack {
                         Spacer()
@@ -95,16 +90,16 @@ struct LocationView: View {
         .ignoresSafeArea(.keyboard)
         .navigationBarBackButtonHidden(true)
         .onAppear {
-            seedCharactersIfNeeded()
+            seedMissingCharacters()
+        }
+        .onChange(of: characterStore.players) { _, _ in
+            // Когда добавили/восстановили персонажа — сразу ставим в локацию
+            seedMissingCharacters()
         }
         .sheet(isPresented: $showCatalog) {
             ItemCatalogView(location: location) { catalog in
                 let c = floorZone.center
-                let placed = PlacedItem(
-                    catalogID: catalog.id,
-                    x: c.x,
-                    y: c.y
-                )
+                let placed = PlacedItem(catalogID: catalog.id, x: c.x, y: c.y)
                 worldStore.addItem(placed, to: location)
                 showSnackbar("\(catalog.name) добавлен")
             }
@@ -122,44 +117,44 @@ struct LocationView: View {
         }
     }
 
-    // MARK: - Авто-расстановка персонажей
+    // MARK: - Добавление отсутствующих персонажей
 
-    /// При первом заходе в локацию — если пусто,
-    /// расставляет всех существующих персонажей по полу в ряд.
-    private func seedCharactersIfNeeded() {
-        // Если уже кто-то есть в локации — не трогаем
+    /// Добавляет в локацию всех персонажей из хранилища,
+    /// которых здесь ещё нет. Ничего не удаляет и не двигает существующих.
+    private func seedMissingCharacters() {
+        let allPlayers = characterStore.players
+        guard !allPlayers.isEmpty else { return }
+
         let existing = worldStore.positions(for: location)
-        guard existing.isEmpty else { return }
+        let existingIDs = Set(existing.map { $0.playerID })
 
-        // Берём всех персонажей из хранилища (Аня, Демьян и созданные)
-        let players = characterStore.players
-        guard !players.isEmpty else { return }
+        let missing = allPlayers.filter { !existingIDs.contains($0.id) }
+        guard !missing.isEmpty else { return }
 
         let zone = floorZone
-        let count = players.count
 
-        for (index, player) in players.enumerated() {
-            let x: Double
-            if count == 1 {
-                // Один персонаж — по центру
-                x = zone.center.x
-            } else {
-                // Несколько — равномерно по ширине пола
-                let step = (zone.xMax - zone.xMin) / Double(count + 1)
-                x = zone.xMin + step * Double(index + 1)
-            }
+        // Раскладываем только новых — по свободной части пола
+        // Старые позиции не трогаем
+        for (index, player) in missing.enumerated() {
+            // Смещение с учётом уже стоящих персонажей
+            let totalSlots = existing.count + missing.count
+            let slotIndex = existing.count + index
+
+            let step = (zone.xMax - zone.xMin) / Double(totalSlots + 1)
+            let x = zone.xMin + step * Double(slotIndex + 1)
+            let y = zone.center.y
 
             let placed = PlacedPlayer(
                 playerID: player.id,
                 locationRaw: location.rawValue,
                 x: x,
-                y: zone.center.y
+                y: y
             )
             worldStore.setPosition(placed, in: location)
         }
     }
 
-    // MARK: - Поиск CatalogItem по ID
+    // MARK: - Поиск CatalogItem
 
     private func catalogItem(for id: String) -> CatalogItem? {
         ItemCatalog.all.first { $0.id == id }
