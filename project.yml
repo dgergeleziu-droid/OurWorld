@@ -7,7 +7,12 @@ targets:
   OurWorld:
     type: application
     platform: iOS
-    sources: [Sources]
+    sources:
+      - path: Sources
+        excludes:
+          - "Assets/**"
+    resources:
+      - path: Sources/Assets
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.example.ourworld
