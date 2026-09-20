@@ -1,105 +1,184 @@
 import SwiftUI
 
 struct LocationView: View {
-    @EnvironmentObject var store: CharacterStore
+    @EnvironmentObject var characterStore: CharacterStore
+    @EnvironmentObject var worldStore: WorldStore
     let location: LocationID
 
-    @State private var activeIndex: Int = 0
-    @State private var positions: [UUID: CGPoint] = [:]
+    @State private var showCatalog = false
+    @State private var draggingItemID: UUID? = nil
+    @State private var draggingPlayerID: UUID? = nil
+    @State private var dragOffset: CGSize = .zero
+    @State private var initialPosition: CGPoint = .zero
+    @State private var showCharactersPicker = false
+    @State private var showSelectedPlayerSheet: Player? = nil
 
     var body: some View {
         GeometryReader { geo in
             ZStack {
                 LocationBackground(location: location)
 
-                ForEach(Array(store.players.enumerated()), id: \.element.id) { idx, player in
-                    let pos = positions[player.id] ?? defaultPosition(for: idx, in: geo.size)
-
-                    AvatarView(player: player, size: 90)
-                        .position(pos)
-                        .onTapGesture {
-                            withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
-                                activeIndex = idx
-                            }
-                            if let v = player.voiceFileName {
-                                AudioManager.shared.playVoice(fileName: v)
-                            }
-                        }
-                        .overlay(
-                            Circle()
-                                .stroke(activeIndex == idx ? Color.white : Color.clear, lineWidth: 3)
-                                .frame(width: 100, height: 100)
-                                .shadow(color: .black.opacity(0.25), radius: 3)
-                                .position(pos)
-                                .allowsHitTesting(false)
+                // Предметы
+                ForEach(worldStore.items(for: location)) { item in
+                    if let catalog = ItemCatalog.item(byID: item.catalogID) {
+                        ItemOnSceneView(
+                            catalog: catalog,
+                            isDragging: draggingItemID == item.id
                         )
+                        .position(
+                            x: item.x + (draggingItemID == item.id ? dragOffset.width : 0),
+                            y: item.y + (draggingItemID == item.id ? dragOffset.height : 0)
+                        )
+                        .gesture(
+                            DragGesture(minimumDistance: 0)
+                                .onChanged { v in
+                                    if draggingItemID == nil {
+                                        draggingItemID = item.id
+                                        initialPosition = CGPoint(x: item.x, y: item.y)
+                                    }
+                                    dragOffset = v.translation
+                                }
+                                .onEnded { v in
+                                    var updated = item
+                                    updated.x = initialPosition.x + v.translation.width
+                                    updated.y = initialPosition.y + v.translation.height
+                                    worldStore.updateItem(updated, in: location)
+                                    draggingItemID = nil
+                                    dragOffset = .zero
+                                }
+                        )
+                        .onLongPressGesture {
+                            worldStore.removeItem(item, in: location)
+                        }
+                    }
                 }
 
+                // Персонажи
+                ForEach(characterStore.players) { player in
+                    let pos = position(for: player, in: geo.size)
+
+                    AvatarView(
+                        player: player,
+                        size: 110,
+                        isDragging: draggingPlayerID == player.id
+                    )
+                    .position(
+                        x: pos.x + (draggingPlayerID == player.id ? dragOffset.width : 0),
+                        y: pos.y + (draggingPlayerID == player.id ? dragOffset.height : 0)
+                    )
+                    .gesture(
+                        DragGesture(minimumDistance: 0)
+                            .onChanged { v in
+                                if draggingPlayerID == nil {
+                                    draggingPlayerID = player.id
+                                    initialPosition = pos
+                                }
+                                dragOffset = v.translation
+                            }
+                            .onEnded { v in
+                                let newX = initialPosition.x + v.translation.width
+                                let newY = initialPosition.y + v.translation.height
+                                let placed = PlacedPlayer(playerID: player.id, x: newX, y: newY)
+                                worldStore.setPosition(placed, in: location)
+
+                                // Если почти не двигали — это тап → играем голос
+                                if abs(v.translation.width) < 5 && abs(v.translation.height) < 5 {
+                                    if let voice = player.voiceFileName {
+                                        AudioManager.shared.playVoice(fileName: voice)
+                                    }
+                                    showSelectedPlayerSheet = player
+                                }
+
+                                draggingPlayerID = nil
+                                dragOffset = .zero
+                            }
+                    )
+                }
+
+                // Верхняя панель с кнопками
                 VStack {
-                    Spacer()
-                    if !store.players.isEmpty {
-                        HStack(spacing: 8) {
-                            Image(systemName: "hand.tap.fill")
-                                .foregroundColor(.white)
-                            Text("Тапни по месту — \(activeName) пойдёт туда")
-                                .font(.system(size: 13, weight: .medium, design: .rounded))
-                                .foregroundColor(.white)
+                    HStack(spacing: 10) {
+                        Spacer()
+
+                        Button {
+                            showCharactersPicker = true
+                        } label: {
+                            HStack(spacing: 5) {
+                                Image(systemName: "person.2.fill")
+                                Text("\(characterStore.players.count)")
+                            }
+                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                            .foregroundColor(Color(hex: "#111827"))
+                            .padding(.horizontal, 14).padding(.vertical, 10)
+                            .background(Capsule().fill(Color.white))
+                            .shadow(color: .black.opacity(0.12), radius: 6, y: 3)
                         }
-                        .padding(.horizontal, 16).padding(.vertical, 10)
-                        .background(Color.black.opacity(0.55))
-                        .cornerRadius(22)
-                        .padding(.bottom, 30)
+
+                        Button {
+                            showCatalog = true
+                        } label: {
+                            HStack(spacing: 5) {
+                                Image(systemName: "plus.circle.fill")
+                                Text("Предмет")
+                            }
+                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 14).padding(.vertical, 10)
+                            .background(Capsule().fill(Color(hex: "#3B82F6")))
+                            .shadow(color: Color(hex: "#3B82F6").opacity(0.4), radius: 6, y: 3)
+                        }
                     }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+
+                    Spacer()
+
+                    // Подсказка
+                    Text("Перетаскивай персонажей и предметы. Долгое нажатие на предмет — удалить.")
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .foregroundColor(.white)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 14).padding(.vertical, 8)
+                        .background(Color.black.opacity(0.55))
+                        .cornerRadius(16)
+                        .padding(.bottom, 20)
                 }
             }
-            .contentShape(Rectangle())
-            .gesture(
-                DragGesture(minimumDistance: 0)
-                    .onEnded { value in
-                        moveActive(to: value.location)
-                    }
-            )
         }
         .navigationTitle(location.rawValue)
         .navigationBarTitleDisplayMode(.inline)
-        .overlay {
-            if store.players.isEmpty {
-                VStack(spacing: 14) {
-                    Image(systemName: "person.crop.circle.badge.plus")
-                        .font(.system(size: 54))
-                        .foregroundColor(Color(hex: "#D1D5DB"))
-                    Text("Сначала создай персонажа")
-                        .font(.system(size: 17, weight: .semibold, design: .rounded))
-                        .foregroundColor(Color(hex: "#111827"))
-                    Text("Вернись в меню и нажми «Создать»")
-                        .font(.system(size: 13, design: .rounded))
-                        .foregroundColor(Color(hex: "#6B7280"))
-                }
-                .padding(30)
-                .background(RoundedRectangle(cornerRadius: 22).fill(Color.white))
-                .shadow(color: .black.opacity(0.15), radius: 20)
-                .padding(40)
+        .sheet(isPresented: $showCatalog) {
+            ItemCatalogView(location: location) { catalog in
+                addItemToScene(catalog: catalog)
             }
+            .environmentObject(worldStore)
+        }
+        .sheet(isPresented: $showCharactersPicker) {
+            CharacterListSheet()
+                .environmentObject(characterStore)
+        }
+        .sheet(item: $showSelectedPlayerSheet) { p in
+            PlayerDetailView(player: p)
+                .environmentObject(characterStore)
         }
     }
 
-    var activeName: String {
-        guard !store.players.isEmpty else { return "персонаж" }
-        let idx = min(activeIndex, store.players.count - 1)
-        return store.players[idx].name
+    func addItemToScene(catalog: CatalogItem) {
+        // Позиция в центре + случайный сдвиг
+        let size = UIScreen.main.bounds.size
+        let placed = PlacedItem(
+            catalogID: catalog.id,
+            x: Double(size.width / 2 + CGFloat.random(in: -60...60)),
+            y: Double(size.height / 2 + CGFloat.random(in: -80...80))
+        )
+        worldStore.addItem(placed, in: location)
     }
 
-    func moveActive(to point: CGPoint) {
-        guard !store.players.isEmpty else { return }
-        let idx = min(activeIndex, store.players.count - 1)
-        let id = store.players[idx].id
-        withAnimation(.easeInOut(duration: 0.55)) {
-            positions[id] = point
+    func position(for player: Player, in size: CGSize) -> CGPoint {
+        if let placed = worldStore.positions(for: location).first(where: { $0.playerID == player.id }) {
+            return CGPoint(x: placed.x, y: placed.y)
         }
-    }
-
-    func defaultPosition(for index: Int, in size: CGSize) -> CGPoint {
-        CGPoint(x: size.width / 2 + CGFloat(index) * 70 - 35,
-                y: size.height / 2)
+        // Дефолтная позиция — по центру внизу
+        return CGPoint(x: size.width / 2, y: size.height * 0.7)
     }
 }
