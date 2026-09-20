@@ -3,6 +3,7 @@ import SwiftUI
 struct MainMenuView: View {
     @EnvironmentObject var store: CharacterStore
     @State private var showCreator = false
+    @State private var showDebug = false
 
     var body: some View {
         NavigationStack {
@@ -88,11 +89,35 @@ struct MainMenuView: View {
                         .padding(.bottom, 40)
                     }
                 }
+
+                // 🔴 КНОПКА ДИАГНОСТИКИ — правый нижний угол
+                VStack {
+                    Spacer()
+                    HStack {
+                        Spacer()
+                        Button {
+                            showDebug = true
+                        } label: {
+                            Image(systemName: "ladybug.fill")
+                                .font(.system(size: 20, weight: .bold))
+                                .foregroundColor(.white)
+                                .frame(width: 56, height: 56)
+                                .background(Circle().fill(Color.red))
+                                .shadow(color: .black.opacity(0.3), radius: 8, y: 4)
+                        }
+                        .padding(.trailing, 20)
+                        .padding(.bottom, 20)
+                    }
+                }
             }
             .navigationBarHidden(true)
         }
         .sheet(isPresented: $showCreator) {
             CharacterCreatorView()
+                .environmentObject(store)
+        }
+        .sheet(isPresented: $showDebug) {
+            DebugView()
                 .environmentObject(store)
         }
     }
