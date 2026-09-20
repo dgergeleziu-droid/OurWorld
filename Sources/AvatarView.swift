@@ -11,9 +11,8 @@ struct AvatarView: View {
     private var outfit: Color { Palette.outfitColors[safe: player.outfitColor] ?? Palette.outfitColors[0] }
 
     var body: some View {
-        // Если у персонажа задана картинка — показываем её
-        if let imageName = player.imageName {
-            Image(imageName)
+        if let imageName = player.imageName, let uiImage = UIImage(named: imageName) {
+            Image(uiImage: uiImage)
                 .resizable()
                 .scaledToFit()
                 .frame(width: size, height: size)
@@ -24,17 +23,15 @@ struct AvatarView: View {
         }
     }
 
-    // MARK: - Нарисованный персонаж (Toca Boca style)
+    // MARK: - Нарисованный персонаж
     @ViewBuilder
     var drawnAvatar: some View {
         ZStack {
-            // Тень на полу
             Ellipse()
                 .fill(Color.black.opacity(0.10))
                 .frame(width: size * 0.55, height: size * 0.06)
                 .offset(y: size * 0.44)
 
-            // Ноги
             HStack(spacing: size * 0.05) {
                 Capsule().fill(skin)
                     .frame(width: size * 0.10, height: size * 0.20)
@@ -43,7 +40,6 @@ struct AvatarView: View {
             }
             .offset(y: size * 0.33)
 
-            // Обувь
             HStack(spacing: size * 0.05) {
                 RoundedRectangle(cornerRadius: size * 0.02)
                     .fill(Color(hex: "#2C2C2C"))
@@ -54,19 +50,14 @@ struct AvatarView: View {
             }
             .offset(y: size * 0.44)
 
-            // Тело
             bodyView
-
-            // Руки
             armView
 
-            // Голова
             Circle()
                 .fill(skin)
                 .frame(width: size * 0.62, height: size * 0.62)
                 .offset(y: -size * 0.14)
 
-            // Уши
             Circle().fill(skin)
                 .frame(width: size * 0.07, height: size * 0.07)
                 .offset(x: -size * 0.31, y: -size * 0.14)
@@ -74,13 +65,8 @@ struct AvatarView: View {
                 .frame(width: size * 0.07, height: size * 0.07)
                 .offset(x: size * 0.31, y: -size * 0.14)
 
-            // Волосы
             hairView
-
-            // Лицо
             faceView
-
-            // Аксессуар
             accessoryView
         }
         .frame(width: size, height: size)
@@ -88,11 +74,10 @@ struct AvatarView: View {
         .animation(.spring(response: 0.25, dampingFraction: 0.7), value: isDragging)
     }
 
-    // MARK: - Тело
     @ViewBuilder
     var bodyView: some View {
         switch player.outfitStyle {
-        case 1, 6: // Платье, сарафан
+        case 1, 6:
             Path { p in
                 let w = size * 0.44
                 let h = size * 0.22
@@ -113,7 +98,6 @@ struct AvatarView: View {
         }
     }
 
-    // MARK: - Руки
     var armView: some View {
         HStack(spacing: size * 0.30) {
             Capsule().fill(skin)
@@ -124,22 +108,17 @@ struct AvatarView: View {
         .offset(y: size * 0.18)
     }
 
-    // MARK: - Волосы
     @ViewBuilder
     var hairView: some View {
         let headR = size * 0.31
         switch player.hairStyle {
-        case 0: // Короткие
+        case 0:
             Circle()
                 .fill(hair)
                 .frame(width: headR * 2.1, height: headR * 1.9)
                 .offset(y: -size * 0.20)
-                .mask(
-                    Rectangle()
-                        .frame(height: size * 0.25)
-                        .offset(y: -size * 0.22)
-                )
-        case 1: // Длинные
+                .mask(Rectangle().frame(height: size * 0.25).offset(y: -size * 0.22))
+        case 1:
             ZStack {
                 RoundedRectangle(cornerRadius: size * 0.20)
                     .fill(hair)
@@ -150,121 +129,73 @@ struct AvatarView: View {
                     .frame(width: headR * 2.05, height: headR * 1.7)
                     .offset(y: -size * 0.20)
             }
-            .mask(
-                VStack(spacing: 0) {
-                    Rectangle().frame(height: size * 0.32)
-                    Spacer()
-                }
-            )
-        case 2: // Хвостики
+            .mask(VStack(spacing: 0) { Rectangle().frame(height: size * 0.32); Spacer() })
+        case 2:
             ZStack {
                 Circle()
                     .fill(hair)
                     .frame(width: headR * 2.1, height: headR * 1.8)
                     .offset(y: -size * 0.20)
-                    .mask(
-                        Rectangle()
-                            .frame(height: size * 0.25)
-                            .offset(y: -size * 0.22)
-                    )
-                Circle().fill(hair)
-                    .frame(width: size * 0.22, height: size * 0.22)
-                    .offset(x: -size * 0.36, y: -size * 0.02)
-                Circle().fill(hair)
-                    .frame(width: size * 0.22, height: size * 0.22)
-                    .offset(x: size * 0.36, y: -size * 0.02)
+                    .mask(Rectangle().frame(height: size * 0.25).offset(y: -size * 0.22))
+                Circle().fill(hair).frame(width: size * 0.22, height: size * 0.22).offset(x: -size * 0.36, y: -size * 0.02)
+                Circle().fill(hair).frame(width: size * 0.22, height: size * 0.22).offset(x: size * 0.36, y: -size * 0.02)
             }
-        case 3: // Пучок
+        case 3:
             ZStack {
                 Circle()
                     .fill(hair)
                     .frame(width: headR * 2.1, height: headR * 1.8)
                     .offset(y: -size * 0.20)
-                    .mask(
-                        Rectangle()
-                            .frame(height: size * 0.25)
-                            .offset(y: -size * 0.22)
-                    )
-                Circle().fill(hair)
-                    .frame(width: size * 0.26, height: size * 0.26)
-                    .offset(y: -size * 0.50)
+                    .mask(Rectangle().frame(height: size * 0.25).offset(y: -size * 0.22))
+                Circle().fill(hair).frame(width: size * 0.26, height: size * 0.26).offset(y: -size * 0.50)
             }
-        case 4: // Кудри
+        case 4:
             ZStack {
                 ForEach(0..<8) { i in
                     let angle = Double(i) / 7 * .pi - .pi / 2
-                    Circle()
-                        .fill(hair)
-                        .frame(width: size * 0.20, height: size * 0.20)
-                        .offset(
-                            x: CGFloat(cos(angle)) * size * 0.26,
-                            y: -size * 0.24 + CGFloat(sin(angle)) * size * 0.18
-                        )
+                    Circle().fill(hair).frame(width: size * 0.20, height: size * 0.20)
+                        .offset(x: CGFloat(cos(angle)) * size * 0.26,
+                                y: -size * 0.24 + CGFloat(sin(angle)) * size * 0.18)
                 }
             }
-        case 5: // Косички
+        case 5:
             ZStack {
                 Circle()
                     .fill(hair)
                     .frame(width: headR * 2.1, height: headR * 1.8)
                     .offset(y: -size * 0.20)
-                    .mask(
-                        Rectangle()
-                            .frame(height: size * 0.25)
-                            .offset(y: -size * 0.22)
-                    )
-                Capsule().fill(hair)
-                    .frame(width: size * 0.11, height: size * 0.36)
-                    .offset(x: -size * 0.33, y: size * 0.06)
-                Capsule().fill(hair)
-                    .frame(width: size * 0.11, height: size * 0.36)
-                    .offset(x: size * 0.33, y: size * 0.06)
+                    .mask(Rectangle().frame(height: size * 0.25).offset(y: -size * 0.22))
+                Capsule().fill(hair).frame(width: size * 0.11, height: size * 0.36).offset(x: -size * 0.33, y: size * 0.06)
+                Capsule().fill(hair).frame(width: size * 0.11, height: size * 0.36).offset(x: size * 0.33, y: size * 0.06)
             }
-        case 6: // Ирокез
-            Capsule()
-                .fill(hair)
-                .frame(width: size * 0.16, height: size * 0.42)
-                .offset(y: -size * 0.40)
-        case 7: // Прямые длинные
+        case 6:
+            Capsule().fill(hair).frame(width: size * 0.16, height: size * 0.42).offset(y: -size * 0.40)
+        case 7:
             RoundedRectangle(cornerRadius: size * 0.08)
                 .fill(hair)
                 .frame(width: headR * 2.2, height: headR * 2.8)
                 .offset(y: size * 0.02)
-                .mask(
-                    VStack(spacing: 0) {
-                        Rectangle().frame(height: size * 0.36)
-                        Spacer()
-                    }
-                )
-        case 8: // Волны
-            ZStack {
-                Circle()
-                    .fill(hair)
-                    .frame(width: headR * 2.3, height: headR * 2.1)
-                    .offset(y: -size * 0.16)
-                    .mask(
-                        Rectangle()
-                            .frame(height: size * 0.30)
-                            .offset(y: -size * 0.20)
-                    )
-            }
-        default: // Лысый
+                .mask(VStack(spacing: 0) { Rectangle().frame(height: size * 0.36); Spacer() })
+        case 8:
+            Circle()
+                .fill(hair)
+                .frame(width: headR * 2.3, height: headR * 2.1)
+                .offset(y: -size * 0.16)
+                .mask(Rectangle().frame(height: size * 0.30).offset(y: -size * 0.20))
+        default:
             EmptyView()
         }
     }
 
-    // MARK: - Лицо
     @ViewBuilder
     var faceView: some View {
         ZStack {
             eyeView.offset(x: -size * 0.12, y: -size * 0.15)
             eyeView.offset(x: size * 0.12, y: -size * 0.15)
-
             Circle()
                 .fill(skin.opacity(0.75))
                 .frame(width: size * 0.03, height: size * 0.03)
                 .offset(y: -size * 0.07)
-
             mouthView.offset(y: -size * 0.01)
         }
     }
@@ -300,99 +231,67 @@ struct AvatarView: View {
                 .frame(width: w, height: h)
         case 1:
             ZStack {
-                FilledSmileShape().fill(Color(hex: "#C0392B"))
-                    .frame(width: w, height: h * 1.3)
-                FilledSmileShape().fill(Color.white)
-                    .frame(width: w * 0.85, height: h * 0.5)
-                    .offset(y: -h * 0.3)
+                FilledSmileShape().fill(Color(hex: "#C0392B")).frame(width: w, height: h * 1.3)
+                FilledSmileShape().fill(Color.white).frame(width: w * 0.85, height: h * 0.5).offset(y: -h * 0.3)
             }
         case 2:
             ZStack {
-                Capsule().fill(Color(hex: "#C0392B"))
-                    .frame(width: w, height: size * 0.025)
-                Circle().fill(Color(hex: "#C0392B"))
-                    .frame(width: size * 0.02, height: size * 0.02)
-                    .offset(y: size * 0.018)
+                Capsule().fill(Color(hex: "#C0392B")).frame(width: w, height: size * 0.025)
+                Circle().fill(Color(hex: "#C0392B")).frame(width: size * 0.02, height: size * 0.02).offset(y: size * 0.018)
             }
         case 3:
-            Capsule().fill(Color(hex: "#8B2C1A"))
-                .frame(width: w * 0.8, height: size * 0.02)
+            Capsule().fill(Color(hex: "#8B2C1A")).frame(width: w * 0.8, height: size * 0.02)
         case 4:
-            Circle().fill(Color(hex: "#8B2C1A"))
-                .frame(width: size * 0.06, height: size * 0.06)
+            Circle().fill(Color(hex: "#8B2C1A")).frame(width: size * 0.06, height: size * 0.06)
         default:
             HStack(spacing: w * 0.4) {
-                SmileShape()
-                    .stroke(Color(hex: "#8B2C1A"), lineWidth: size * 0.014)
+                SmileShape().stroke(Color(hex: "#8B2C1A"), lineWidth: size * 0.014)
                     .frame(width: w * 0.3, height: h * 0.5)
-                SmileShape()
-                    .stroke(Color(hex: "#8B2C1A"), lineWidth: size * 0.014)
+                SmileShape().stroke(Color(hex: "#8B2C1A"), lineWidth: size * 0.014)
                     .frame(width: w * 0.3, height: h * 0.5)
             }
         }
     }
 
-    // MARK: - Аксессуар
     @ViewBuilder
     var accessoryView: some View {
         switch player.accessory {
-        case 1: // Очки
+        case 1:
             HStack(spacing: size * 0.04) {
-                Circle().stroke(Color.black, lineWidth: size * 0.012)
-                    .frame(width: size * 0.15, height: size * 0.15)
-                Circle().stroke(Color.black, lineWidth: size * 0.012)
-                    .frame(width: size * 0.15, height: size * 0.15)
+                Circle().stroke(Color.black, lineWidth: size * 0.012).frame(width: size * 0.15, height: size * 0.15)
+                Circle().stroke(Color.black, lineWidth: size * 0.012).frame(width: size * 0.15, height: size * 0.15)
             }
             .offset(y: -size * 0.15)
-        case 2: // Кепка
+        case 2:
             ZStack {
                 Circle().fill(Color(hex: "#3B82F6"))
                     .frame(width: size * 0.42, height: size * 0.30)
                     .offset(y: -size * 0.37)
-                    .mask(
-                        Rectangle().frame(height: size * 0.14)
-                            .offset(y: -size * 0.42)
-                    )
+                    .mask(Rectangle().frame(height: size * 0.14).offset(y: -size * 0.42))
                 Capsule().fill(Color(hex: "#1E40AF"))
                     .frame(width: size * 0.32, height: size * 0.05)
                     .offset(x: size * 0.10, y: -size * 0.30)
             }
-        case 3: // Бант
+        case 3:
             ZStack {
-                Circle().fill(Color(hex: "#E0447A"))
-                    .frame(width: size * 0.08, height: size * 0.08)
-                    .offset(x: -size * 0.07, y: -size * 0.36)
-                Circle().fill(Color(hex: "#E0447A"))
-                    .frame(width: size * 0.08, height: size * 0.08)
-                    .offset(x: size * 0.07, y: -size * 0.36)
-                Circle().fill(Color(hex: "#C0392B"))
-                    .frame(width: size * 0.05, height: size * 0.05)
-                    .offset(y: -size * 0.36)
+                Circle().fill(Color(hex: "#E0447A")).frame(width: size * 0.08, height: size * 0.08).offset(x: -size * 0.07, y: -size * 0.36)
+                Circle().fill(Color(hex: "#E0447A")).frame(width: size * 0.08, height: size * 0.08).offset(x: size * 0.07, y: -size * 0.36)
+                Circle().fill(Color(hex: "#C0392B")).frame(width: size * 0.05, height: size * 0.05).offset(y: -size * 0.36)
             }
-        case 4: // Шляпа
+        case 4:
             ZStack {
-                Ellipse().fill(Color(hex: "#2C2C2C"))
-                    .frame(width: size * 0.55, height: size * 0.09)
-                    .offset(y: -size * 0.34)
-                RoundedRectangle(cornerRadius: size * 0.05)
-                    .fill(Color(hex: "#2C2C2C"))
-                    .frame(width: size * 0.28, height: size * 0.20)
-                    .offset(y: -size * 0.42)
+                Ellipse().fill(Color(hex: "#2C2C2C")).frame(width: size * 0.55, height: size * 0.09).offset(y: -size * 0.34)
+                RoundedRectangle(cornerRadius: size * 0.05).fill(Color(hex: "#2C2C2C")).frame(width: size * 0.28, height: size * 0.20).offset(y: -size * 0.42)
             }
-        case 5: // Ободок
+        case 5:
             Circle().stroke(Color(hex: "#FFD93D"), lineWidth: size * 0.02)
                 .frame(width: size * 0.56, height: size * 0.56)
                 .offset(y: -size * 0.14)
-                .mask(
-                    Rectangle().frame(height: size * 0.12)
-                        .offset(y: -size * 0.34)
-                )
-        case 6: // Серёжки
+                .mask(Rectangle().frame(height: size * 0.12).offset(y: -size * 0.34))
+        case 6:
             HStack(spacing: size * 0.56) {
-                Circle().fill(Color(hex: "#F1D77E"))
-                    .frame(width: size * 0.05, height: size * 0.05)
-                Circle().fill(Color(hex: "#F1D77E"))
-                    .frame(width: size * 0.05, height: size * 0.05)
+                Circle().fill(Color(hex: "#F1D77E")).frame(width: size * 0.05, height: size * 0.05)
+                Circle().fill(Color(hex: "#F1D77E")).frame(width: size * 0.05, height: size * 0.05)
             }
             .offset(y: -size * 0.08)
         default:
@@ -401,15 +300,13 @@ struct AvatarView: View {
     }
 }
 
-// MARK: - Фигуры для рта
+// MARK: - Фигуры
 struct SmileShape: Shape {
     func path(in rect: CGRect) -> Path {
         var p = Path()
         p.move(to: CGPoint(x: rect.minX, y: rect.minY))
-        p.addQuadCurve(
-            to: CGPoint(x: rect.maxX, y: rect.minY),
-            control: CGPoint(x: rect.midX, y: rect.maxY * 2.4)
-        )
+        p.addQuadCurve(to: CGPoint(x: rect.maxX, y: rect.minY),
+                       control: CGPoint(x: rect.midX, y: rect.maxY * 2.4))
         return p
     }
 }
@@ -418,10 +315,8 @@ struct FilledSmileShape: Shape {
     func path(in rect: CGRect) -> Path {
         var p = Path()
         p.move(to: CGPoint(x: rect.minX, y: rect.minY))
-        p.addQuadCurve(
-            to: CGPoint(x: rect.maxX, y: rect.minY),
-            control: CGPoint(x: rect.midX, y: rect.maxY * 2.0)
-        )
+        p.addQuadCurve(to: CGPoint(x: rect.maxX, y: rect.minY),
+                       control: CGPoint(x: rect.midX, y: rect.maxY * 2.0))
         p.closeSubpath()
         return p
     }
