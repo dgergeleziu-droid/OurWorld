@@ -12,6 +12,7 @@ struct VoiceRecorderView: View {
     @State private var timer: Timer?
     @State private var recordedFileName: String?
     @State private var hasPermission = false
+    @State private var isSaved = false
 
     var body: some View {
         NavigationStack {
@@ -32,13 +33,11 @@ struct VoiceRecorderView: View {
                         .font(.system(size: 15, design: .rounded))
                         .foregroundColor(Color(hex: "#6B7280"))
 
-                    // Таймер
                     Text(formattedTime)
                         .font(.system(size: 56, weight: .heavy, design: .monospaced))
                         .foregroundColor(isRecording ? Color(hex: "#EF4444") : Color(hex: "#111827"))
                         .padding(.vertical, 10)
 
-                    // Кнопка записи
                     Button {
                         if isRecording { stopRecording() } else { startRecording() }
                     } label: {
@@ -84,7 +83,6 @@ struct VoiceRecorderView: View {
                             }
 
                             Button {
-                                // Перезапись — начинаем заново
                                 if let name = recordedFileName {
                                     AudioManager.shared.deleteVoice(fileName: name)
                                 }
@@ -111,10 +109,13 @@ struct VoiceRecorderView: View {
 
                     Spacer()
 
-                    // Кнопки внизу
                     HStack(spacing: 12) {
                         Button {
-                            cancelAndDismiss()
+                            if !isSaved, let name = recordedFileName {
+                                AudioManager.shared.deleteVoice(fileName: name)
+                            }
+                            if isRecording { stopRecording() }
+                            dismiss()
                         } label: {
                             Text("Отмена")
                                 .font(.system(size: 16, weight: .semibold))
@@ -127,7 +128,10 @@ struct VoiceRecorderView: View {
                         }
 
                         Button {
-                            saveAndDismiss()
+                            stopRecording()
+                            isSaved = true
+                            onSave(recordedFileName)
+                            dismiss()
                         } label: {
                             Text("Сохранить")
                                 .font(.system(size: 16, weight: .bold))
@@ -151,12 +155,8 @@ struct VoiceRecorderView: View {
         .onAppear {
             requestMicrophonePermission()
         }
-        .onDisappear {
-            cancelAndDismiss()
-        }
     }
 
-    // MARK: - Логика
     private var formattedTime: String {
         let m = Int(secondsElapsed) / 60
         let s = Int(secondsElapsed) % 60
@@ -219,24 +219,4 @@ struct VoiceRecorderView: View {
         timer?.invalidate()
         timer = nil
     }
-
-    private func saveAndDismiss() {
-        stopRecording()
-        onSave(recordedFileName)
-        dismiss()
-    }
-
-    private func cancelAndDismiss() {
-        if isRecording {
-            stopRecording()
-        }
-        if let name = recordedFileName {
-            // Если пользователь не сохранил — удаляем файл
-            if !isSaved {
-                AudioManager.shared.deleteVoice(fileName: name)
-            }
-        }
-    }
-
-    @State private var isSaved = false
 }
