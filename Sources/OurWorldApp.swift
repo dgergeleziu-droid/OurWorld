@@ -10,20 +10,19 @@ struct OurWorldApp: App {
         WindowGroup {
             ZStack {
                 if showSplash {
-                    SplashView()
-                        .transition(.opacity)
+                    SplashView().transition(.opacity)
                 } else {
-                    MainMenuView()
-                        .environmentObject(characterStore)
-                        .environmentObject(worldStore)
-                        .transition(.opacity)
+                    NavigationStack {
+                        WorldMapView()
+                            .environmentObject(characterStore)
+                            .environmentObject(worldStore)
+                    }
+                    .transition(.opacity)
                 }
             }
             .onAppear {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
-                    withAnimation(.easeInOut(duration: 0.8)) {
-                        showSplash = false
-                    }
+                    withAnimation(.easeInOut(duration: 0.8)) { showSplash = false }
                 }
             }
         }
