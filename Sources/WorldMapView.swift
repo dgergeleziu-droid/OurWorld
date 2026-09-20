@@ -7,7 +7,7 @@ struct WorldMapView: View {
     var body: some View {
         GeometryReader { geo in
             ZStack {
-                // Небо
+                // ===== ФОН =====
                 LinearGradient(
                     colors: [Color(hex: "#87CEEB"), Color(hex: "#B0E0FF")],
                     startPoint: .top, endPoint: .bottom
@@ -16,154 +16,135 @@ struct WorldMapView: View {
                 // Солнце
                 Circle()
                     .fill(Color(hex: "#FCD34D"))
-                    .frame(width: 80, height: 80)
+                    .frame(width: 90, height: 90)
                     .position(x: geo.size.width - 80, y: 80)
+                    .shadow(color: Color(hex: "#FCD34D").opacity(0.6), radius: 20)
 
                 // Облака
-                CloudView()
-                    .position(x: geo.size.width * 0.2, y: 70)
-                CloudView()
-                    .scaleEffect(0.7)
-                    .position(x: geo.size.width * 0.6, y: 110)
+                CloudShape().position(x: geo.size.width * 0.20, y: 90)
+                CloudShape().scaleEffect(0.7).position(x: geo.size.width * 0.65, y: 120)
+                CloudShape().scaleEffect(0.5).position(x: geo.size.width * 0.90, y: 70)
 
-                // Трава
+                // Трава (нижняя часть)
                 Rectangle()
                     .fill(LinearGradient(
                         colors: [Color(hex: "#7BC96F"), Color(hex: "#5BAF50")],
                         startPoint: .top, endPoint: .bottom))
-                    .frame(height: geo.size.height * 0.75)
-                    .position(x: geo.size.width / 2, y: geo.size.height * 0.75)
+                    .frame(height: geo.size.height * 0.72)
+                    .position(x: geo.size.width / 2, y: geo.size.height * 0.78)
 
-                // Здания (локации)
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 30) {
-                        ForEach(LocationID.allCases) { loc in
-                            NavigationLink {
-                                LocationView(location: loc)
-                            } label: {
-                                BuildingCard(location: loc)
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                    .padding(.horizontal, 40)
+                // Дорожки между зданиями
+                Path { p in
+                    p.move(to: CGPoint(x: geo.size.width * 0.20, y: geo.size.height * 0.55))
+                    p.addLine(to: CGPoint(x: geo.size.width * 0.50, y: geo.size.height * 0.70))
+                    p.addLine(to: CGPoint(x: geo.size.width * 0.80, y: geo.size.height * 0.60))
                 }
-                .frame(height: 380)
-                .position(x: geo.size.width / 2, y: geo.size.height * 0.62)
+                .stroke(Color(hex: "#C9A96E").opacity(0.7),
+                        style: StrokeStyle(lineWidth: 40, lineCap: .round, lineJoin: .round))
+
+                // ===== ЗДАНИЯ (кнопки-локации) =====
+                ForEach(LocationID.allCases) { loc in
+                    NavigationLink {
+                        LocationView(location: loc)
+                            .environmentObject(characterStore)
+                            .environmentObject(worldStore)
+                    } label: {
+                        BuildingView(location: loc)
+                    }
+                    .buttonStyle(.plain)
+                    .position(
+                        x: geo.size.width * loc.mapPosition.x,
+                        y: geo.size.height * loc.mapPosition.y
+                    )
+                }
+
+                // Заголовок
+                VStack {
+                    HStack {
+                        Text("Наш Мир")
+                            .font(.system(size: 34, weight: .heavy, design: .rounded))
+                            .foregroundColor(Color(hex: "#111827"))
+                            .shadow(color: .white.opacity(0.8), radius: 6)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.top, 20)
+                    Spacer()
+                }
             }
         }
         .navigationBarHidden(true)
-        .overlay(alignment: .topLeading) {
-            // Заголовок
-            Text("Наш Мир")
-                .font(.system(size: 32, weight: .heavy, design: .rounded))
-                .foregroundColor(Color(hex: "#111827"))
-                .padding(.horizontal, 24)
-                .padding(.top, 16)
-        }
     }
 }
 
 // MARK: - Облако
-struct CloudView: View {
+struct CloudShape: View {
     var body: some View {
         ZStack {
-            Circle().fill(.white).frame(width: 40, height: 40).offset(x: -20)
-            Circle().fill(.white).frame(width: 55, height: 55)
-            Circle().fill(.white).frame(width: 40, height: 40).offset(x: 20)
+            Circle().fill(.white).frame(width: 44, height: 44).offset(x: -22)
+            Circle().fill(.white).frame(width: 60, height: 60)
+            Circle().fill(.white).frame(width: 44, height: 44).offset(x: 22)
         }
+        .shadow(color: .black.opacity(0.05), radius: 4, y: 2)
     }
 }
 
-// MARK: - Здание-кнопка
-struct BuildingCard: View {
+// MARK: - Здание на карте
+struct BuildingView: View {
     let location: LocationID
-
-    private var wallColor: Color {
-        switch location {
-        case .home: return Color(hex: "#FCD9A8")
-        case .cafe: return Color(hex: "#D4A57A")
-        case .park: return Color(hex: "#8ED17D")
-        case .beach: return Color(hex: "#FFE0A3")
-        case .space: return Color(hex: "#7C7AE8")
-        case .hospital: return Color(hex: "#F5F5F5")
-        }
-    }
-    private var roofColor: Color {
-        switch location {
-        case .home: return Color(hex: "#D2683C")
-        case .cafe: return Color(hex: "#A0522D")
-        case .park: return Color(hex: "#5BAF50")
-        case .beach: return Color(hex: "#E8A030")
-        case .space: return Color(hex: "#4A48C0")
-        case .hospital: return Color(hex: "#EF4444")
-        }
-    }
-    private var iconColor: Color {
-        switch location {
-        case .home: return Color(hex: "#8B4513")
-        case .cafe: return Color(hex: "#5A3A1E")
-        case .park: return .white
-        case .beach: return Color(hex: "#B86A00")
-        case .space: return .white
-        case .hospital: return Color(hex: "#EF4444")
-        }
-    }
 
     var body: some View {
         VStack(spacing: 0) {
             // Крыша
             Triangle()
-                .fill(roofColor)
-                .frame(width: 160, height: 60)
+                .fill(Color(hex: location.roofColor))
+                .frame(width: 70, height: 26)
+                .shadow(color: .black.opacity(0.15), radius: 3, y: 2)
 
             // Стены
             ZStack {
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(wallColor)
-                    .frame(width: 150, height: 160)
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color(hex: location.wallColor))
+                    .frame(width: 68, height: 60)
+                    .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color(hex: location.roofColor).opacity(0.5), lineWidth: 2))
 
-                // Окно (левое)
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(Color(hex: "#87CEEB"))
-                    .frame(width: 40, height: 40)
-                    .overlay(RoundedRectangle(cornerRadius: 4).stroke(roofColor, lineWidth: 4))
-                    .offset(x: -40, y: -40)
+                // Окошки
+                HStack(spacing: 6) {
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(Color(hex: "#87CEEB"))
+                        .frame(width: 14, height: 14)
+                        .overlay(RoundedRectangle(cornerRadius: 2).stroke(Color(hex: location.roofColor), lineWidth: 2))
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(Color(hex: "#87CEEB"))
+                        .frame(width: 14, height: 14)
+                        .overlay(RoundedRectangle(cornerRadius: 2).stroke(Color(hex: location.roofColor), lineWidth: 2))
+                }
+                .offset(y: -14)
 
-                // Окно (правое)
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(Color(hex: "#87CEEB"))
-                    .frame(width: 40, height: 40)
-                    .overlay(RoundedRectangle(cornerRadius: 4).stroke(roofColor, lineWidth: 4))
-                    .offset(x: 40, y: -40)
-
-                // Дверь
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(roofColor)
-                    .frame(width: 44, height: 70)
-                    .offset(y: 45)
-
-                // Иконка локации на двери
-                Image(systemName: location.icon)
-                    .font(.system(size: 22, weight: .bold))
-                    .foregroundColor(.white)
-                    .offset(y: 45)
+                // Дверь с иконкой
+                ZStack {
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(Color(hex: location.roofColor))
+                        .frame(width: 20, height: 26)
+                    Image(systemName: location.icon)
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(.white)
+                }
+                .offset(y: 12)
             }
 
             // Подпись
             Text(location.rawValue)
-                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .font(.system(size: 12, weight: .bold, design: .rounded))
                 .foregroundColor(Color(hex: "#111827"))
-                .padding(.horizontal, 22)
-                .padding(.vertical, 8)
+                .padding(.horizontal, 10).padding(.vertical, 3)
                 .background(Capsule().fill(.white))
-                .shadow(color: .black.opacity(0.1), radius: 4, y: 2)
-                .offset(y: 10)
+                .shadow(color: .black.opacity(0.1), radius: 3, y: 2)
+                .offset(y: -4)
         }
     }
 }
 
-// MARK: - Треугольник (крыша)
 struct Triangle: Shape {
     func path(in rect: CGRect) -> Path {
         var p = Path()
