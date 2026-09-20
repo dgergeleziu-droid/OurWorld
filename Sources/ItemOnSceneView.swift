@@ -12,8 +12,16 @@ struct ItemOnSceneView: View {
                 .frame(width: catalog.size * 0.7, height: catalog.size * 0.15)
                 .offset(y: catalog.size * 0.4)
 
-            Text(catalog.emoji)
-                .font(.system(size: catalog.size * 0.7))
+            // Картинка, если есть; иначе — emoji
+            if let imageName = catalog.imageName {
+                Image(imageName)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: catalog.size, height: catalog.size)
+            } else {
+                Text(catalog.emoji)
+                    .font(.system(size: catalog.size * 0.7))
+            }
         }
         .scaleEffect(isDragging ? 1.15 : 1.0)
         .animation(.spring(response: 0.25, dampingFraction: 0.7), value: isDragging)
