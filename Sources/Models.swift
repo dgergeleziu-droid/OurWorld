@@ -63,7 +63,11 @@ struct Player: Identifiable, Codable, Hashable {
     var name: String
     var voiceFileName: String?
 
-    // Внешность — индексы в палитрах
+    // Если задано — показываем эту картинку вместо нарисованного персонажа
+    // Пример: "anya" → Image("anya")
+    var imageName: String?
+
+    // Внешность (используется, если imageName == nil)
     var skinTone: Int
     var hairStyle: Int
     var hairColor: Int
@@ -78,6 +82,7 @@ struct Player: Identifiable, Codable, Hashable {
         id: UUID = UUID(),
         name: String = "",
         voiceFileName: String? = nil,
+        imageName: String? = nil,
         skinTone: Int = 1,
         hairStyle: Int = 0,
         hairColor: Int = 1,
@@ -91,6 +96,7 @@ struct Player: Identifiable, Codable, Hashable {
         self.id = id
         self.name = name
         self.voiceFileName = voiceFileName
+        self.imageName = imageName
         self.skinTone = skinTone
         self.hairStyle = hairStyle
         self.hairColor = hairColor
@@ -102,9 +108,8 @@ struct Player: Identifiable, Codable, Hashable {
         self.accessory = accessory
     }
 
-    // Кастомный декодер: если старые сохранения без новых полей — подставляем дефолты
     enum CodingKeys: String, CodingKey {
-        case id, name, voiceFileName
+        case id, name, voiceFileName, imageName
         case skinTone, hairStyle, hairColor
         case eyeStyle, eyeColor, mouthStyle
         case outfitStyle, outfitColor, accessory
@@ -115,6 +120,7 @@ struct Player: Identifiable, Codable, Hashable {
         id = try c.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
         name = try c.decodeIfPresent(String.self, forKey: .name) ?? "Друг"
         voiceFileName = try c.decodeIfPresent(String.self, forKey: .voiceFileName)
+        imageName = try c.decodeIfPresent(String.self, forKey: .imageName)
         skinTone = try c.decodeIfPresent(Int.self, forKey: .skinTone) ?? 1
         hairStyle = try c.decodeIfPresent(Int.self, forKey: .hairStyle) ?? 0
         hairColor = try c.decodeIfPresent(Int.self, forKey: .hairColor) ?? 1
@@ -158,6 +164,4 @@ struct PlacedPlayer: Identifiable, Codable, Hashable {
 }
 
 // MARK: - Базовая палитра (расширяется в Appearance.swift)
-enum Palette {
-    // Цвета и стили добавляются в extension Palette в файле Appearance.swift
-}
+enum Palette { }
