@@ -1,6 +1,5 @@
 import SwiftUI
 
-// MARK: - HEX → Color
 extension Color {
     init(hex: String) {
         let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
@@ -8,29 +7,24 @@ extension Color {
         Scanner(string: hex).scanHexInt64(&int)
         let r, g, b: UInt64
         switch hex.count {
-        case 3:
-            (r, g, b) = ((int >> 8) * 17, (int >> 4 & 0xF) * 17, (int & 0xF) * 17)
-        case 6:
-            (r, g, b) = (int >> 16, int >> 8 & 0xFF, int & 0xFF)
-        default:
-            (r, g, b) = (0, 0, 0)
+        case 3: (r, g, b) = ((int >> 8) * 17, (int >> 4 & 0xF) * 17, (int & 0xF) * 17)
+        case 6: (r, g, b) = (int >> 16, int >> 8 & 0xFF, int & 0xFF)
+        default: (r, g, b) = (0, 0, 0)
         }
-        self.init(.sRGB,
-                  red: Double(r) / 255,
-                  green: Double(g) / 255,
-                  blue: Double(b) / 255,
-                  opacity: 1)
+        self.init(.sRGB, red: Double(r)/255, green: Double(g)/255, blue: Double(b)/255, opacity: 1)
     }
 }
 
-// MARK: - Локации
+// MARK: - Локации (как "здания" на карте)
 enum LocationID: String, CaseIterable, Identifiable, Codable {
     case home = "Дом"
     case cafe = "Кафе"
     case park = "Парк"
     case beach = "Пляж"
-    case space = "Космос"
+    case shop = "Магазин"
     case hospital = "Больница"
+    case school = "Школа"
+    case space = "Космос"
 
     var id: String { rawValue }
 
@@ -40,19 +34,55 @@ enum LocationID: String, CaseIterable, Identifiable, Codable {
         case .cafe: return "cup.and.saucer.fill"
         case .park: return "tree.fill"
         case .beach: return "beach.umbrella.fill"
-        case .space: return "sparkles"
+        case .shop: return "cart.fill"
         case .hospital: return "cross.case.fill"
+        case .school: return "book.fill"
+        case .space: return "sparkles"
         }
     }
 
-    var color: String {
+    // Цвет крыши здания на карте
+    var roofColor: String {
         switch self {
-        case .home: return "#F59E0B"
-        case .cafe: return "#B45309"
-        case .park: return "#22C55E"
-        case .beach: return "#38BDF8"
-        case .space: return "#6366F1"
+        case .home: return "#D2683C"
+        case .cafe: return "#A0522D"
+        case .park: return "#5BAF50"
+        case .beach: return "#E8A030"
+        case .shop: return "#8B5CF6"
         case .hospital: return "#EF4444"
+        case .school: return "#3B82F6"
+        case .space: return "#4A48C0"
+        }
+    }
+
+    // Цвет стен
+    var wallColor: String {
+        switch self {
+        case .home: return "#FCD9A8"
+        case .cafe: return "#D4A57A"
+        case .park: return "#8ED17D"
+        case .beach: return "#FFE0A3"
+        case .shop: return "#C4B5FD"
+        case .hospital: return "#F5F5F5"
+        case .school: return "#BFDBFE"
+        case .space: return "#7C7AE8"
+        }
+    }
+
+    // Цвет для карточки
+    var color: String { roofColor }
+
+    // Позиция здания на карте (x: 0-1, y: 0-1 от размера экрана)
+    var mapPosition: CGPoint {
+        switch self {
+        case .home:     return CGPoint(x: 0.20, y: 0.30)
+        case .cafe:     return CGPoint(x: 0.60, y: 0.25)
+        case .park:     return CGPoint(x: 0.35, y: 0.55)
+        case .beach:    return CGPoint(x: 0.78, y: 0.50)
+        case .shop:     return CGPoint(x: 0.15, y: 0.75)
+        case .hospital: return CGPoint(x: 0.50, y: 0.82)
+        case .school:   return CGPoint(x: 0.82, y: 0.78)
+        case .space:    return CGPoint(x: 0.05, y: 0.10)
         }
     }
 }
@@ -62,11 +92,8 @@ struct Player: Identifiable, Codable, Hashable {
     var id: UUID
     var name: String
     var voiceFileName: String?
-
-    // Если задано — показываем эту картинку вместо нарисованного персонажа
     var imageName: String?
 
-    // Внешность (для нарисованных персонажей)
     var skinTone: Int
     var hairStyle: Int
     var hairColor: Int
@@ -77,33 +104,16 @@ struct Player: Identifiable, Codable, Hashable {
     var outfitColor: Int
     var accessory: Int
 
-    init(
-        id: UUID = UUID(),
-        name: String = "",
-        voiceFileName: String? = nil,
-        imageName: String? = nil,
-        skinTone: Int = 1,
-        hairStyle: Int = 0,
-        hairColor: Int = 1,
-        eyeStyle: Int = 0,
-        eyeColor: Int = 0,
-        mouthStyle: Int = 0,
-        outfitStyle: Int = 0,
-        outfitColor: Int = 0,
-        accessory: Int = 0
-    ) {
-        self.id = id
-        self.name = name
-        self.voiceFileName = voiceFileName
+    init(id: UUID = UUID(), name: String = "", voiceFileName: String? = nil,
+         imageName: String? = nil, skinTone: Int = 1, hairStyle: Int = 0,
+         hairColor: Int = 1, eyeStyle: Int = 0, eyeColor: Int = 0,
+         mouthStyle: Int = 0, outfitStyle: Int = 0, outfitColor: Int = 0,
+         accessory: Int = 0) {
+        self.id = id; self.name = name; self.voiceFileName = voiceFileName
         self.imageName = imageName
-        self.skinTone = skinTone
-        self.hairStyle = hairStyle
-        self.hairColor = hairColor
-        self.eyeStyle = eyeStyle
-        self.eyeColor = eyeColor
-        self.mouthStyle = mouthStyle
-        self.outfitStyle = outfitStyle
-        self.outfitColor = outfitColor
+        self.skinTone = skinTone; self.hairStyle = hairStyle; self.hairColor = hairColor
+        self.eyeStyle = eyeStyle; self.eyeColor = eyeColor; self.mouthStyle = mouthStyle
+        self.outfitStyle = outfitStyle; self.outfitColor = outfitColor
         self.accessory = accessory
     }
 
@@ -138,29 +148,23 @@ struct PlacedItem: Identifiable, Codable, Hashable {
     var catalogID: String
     var x: Double
     var y: Double
-
     init(id: UUID = UUID(), catalogID: String, x: Double, y: Double) {
-        self.id = id
-        self.catalogID = catalogID
-        self.x = x
-        self.y = y
+        self.id = id; self.catalogID = catalogID; self.x = x; self.y = y
     }
 }
 
-// MARK: - Позиция персонажа на сцене
+// MARK: - Персонаж на сцене локации
 struct PlacedPlayer: Identifiable, Codable, Hashable {
     var id: UUID
     var playerID: UUID
+    var locationRaw: String    // где стоит персонаж
     var x: Double
     var y: Double
 
-    init(id: UUID = UUID(), playerID: UUID, x: Double, y: Double) {
-        self.id = id
-        self.playerID = playerID
-        self.x = x
-        self.y = y
+    init(id: UUID = UUID(), playerID: UUID, locationRaw: String, x: Double, y: Double) {
+        self.id = id; self.playerID = playerID
+        self.locationRaw = locationRaw; self.x = x; self.y = y
     }
 }
 
-// MARK: - Базовая палитра (расширяется в Appearance.swift)
 enum Palette { }
