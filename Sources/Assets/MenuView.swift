@@ -6,11 +6,9 @@ struct MenuView: View {
     @EnvironmentObject var characterStore: CharacterStore
     @Environment(\.dismiss) private var dismiss
 
-    // Настройки звука (сохраняются между запусками)
     @AppStorage("ourworld.musicEnabled") private var musicEnabled: Bool = true
     @AppStorage("ourworld.sfxEnabled")   private var sfxEnabled: Bool = true
 
-    // Диалоги подтверждения
     @State private var showResetWorldAlert = false
     @State private var showResetCharactersAlert = false
     @State private var showCharactersSheet = false
@@ -19,7 +17,6 @@ struct MenuView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // Фон — как в остальных экранах
                 LinearGradient(
                     colors: [
                         Color(hex: "#FDF6EC"),
@@ -32,9 +29,8 @@ struct MenuView: View {
                 .ignoresSafeArea()
 
                 ScrollView {
-                    VStack(spacing: 16) {
+                    VStack(spacing: 12) {
 
-                        // === Персонажи ===
                         sectionTitle("Персонажи", icon: "person.2.fill")
 
                         menuRow(
@@ -46,7 +42,6 @@ struct MenuView: View {
                             showCharactersSheet = true
                         }
 
-                        // === Звук ===
                         sectionTitle("Звук", icon: "speaker.wave.2.fill")
 
                         toggleRow(
@@ -63,7 +58,6 @@ struct MenuView: View {
                             isOn: $sfxEnabled
                         )
 
-                        // === Прогресс ===
                         sectionTitle("Прогресс", icon: "shield.lefthalf.filled")
 
                         menuRow(
@@ -84,7 +78,6 @@ struct MenuView: View {
                             showResetCharactersAlert = true
                         }
 
-                        // === О приложении ===
                         sectionTitle("О приложении", icon: "info.circle.fill")
 
                         menuRow(
@@ -121,8 +114,9 @@ struct MenuView: View {
             Button("Отмена", role: .cancel) { }
             Button("Сбросить", role: .destructive) {
                 worldStore.itemsByLocation.removeAll()
-                // Сохраняем пустое состояние
-                saveEmptyItems()
+                if let data = try? JSONEncoder().encode([String: [PlacedItem]]()) {
+                    UserDefaults.standard.set(data, forKey: "ourworld.items.v4")
+                }
             }
         } message: {
             Text("Вся мебель из всех локаций будет удалена. Это нельзя отменить.")
@@ -154,7 +148,7 @@ struct MenuView: View {
             Spacer()
         }
         .padding(.horizontal, 4)
-        .padding(.top, 12)
+        .padding(.top, 14)
     }
 
     // MARK: - Строка меню
@@ -197,8 +191,7 @@ struct MenuView: View {
             }
             .padding(14)
             .background(
-                RoundedRectangle(cornerRadius: 18)
-                    .fill(Color.white)
+                RoundedRectangle(cornerRadius: 18).fill(Color.white)
             )
             .shadow(color: .black.opacity(0.05), radius: 6, y: 3)
         }
@@ -236,8 +229,7 @@ struct MenuView: View {
         }
         .padding(14)
         .background(
-            RoundedRectangle(cornerRadius: 18)
-                .fill(Color.white)
+            RoundedRectangle(cornerRadius: 18).fill(Color.white)
         )
         .shadow(color: .black.opacity(0.05), radius: 6, y: 3)
     }
@@ -257,12 +249,12 @@ struct MenuView: View {
                     Spacer()
 
                     Image(systemName: "heart.fill")
-                        .font(.system(size: 60))
+                        .font(.system(size: 70))
                         .foregroundColor(Color(hex: "#EC4899"))
                         .shadow(color: Color(hex: "#EC4899").opacity(0.4), radius: 20)
 
                     Text("OurWorld")
-                        .font(.system(size: 42, weight: .heavy, design: .rounded))
+                        .font(.system(size: 44, weight: .heavy, design: .rounded))
                         .foregroundColor(Color(hex: "#111827"))
 
                     Text("Дёма & Анютка ❤️")
@@ -295,30 +287,17 @@ struct MenuView: View {
         }
     }
 
-    // MARK: - Сброс предметов
-
-    private func saveEmptyItems() {
-        // Просто перезаписываем UserDefaults пустым словарём
-        if let data = try? JSONEncoder().encode([String: [PlacedItem]]()) {
-            UserDefaults.standard.set(data, forKey: "ourworld.items.v4")
-        }
-    }
-
     // MARK: - Сброс персонажей
 
     private func resetCharacters() {
-        // Удаляем всех, кроме Ани и Демьяна (по imageName)
+        // Удаляем всех, кроме Ани и Демьяна
         let keep = characterStore.players.filter {
             $0.imageName == "anya" || $0.imageName == "demian"
         }
         characterStore.players = keep
         characterStore.save()
 
-        // Убираем позиции удалённых персонажей
-        for player in characterStore.players {
-            // ничего не делаем, оставляем
-        }
-        // Проще: очистить все позиции и дать seed заново расставить
+        // Сбрасываем все позиции — при следующем заходе seed расставит заново
         worldStore.playersByLocation.removeAll()
     }
 }
