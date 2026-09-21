@@ -13,6 +13,7 @@ struct AvatarHead: View {
     private var eye: Color {
         Palette.eyeColors[safe: player.eyeColor] ?? Palette.eyeColors[0]
     }
+    private var cx: CGFloat { canvasW / 2 }
 
     var body: some View {
         ZStack {
@@ -37,29 +38,35 @@ struct AvatarHead: View {
 
     private func ear(side: CGFloat) -> some View {
         let sz = headSize * 0.16
-        return Circle()
+        let x = cx + side * headSize * 0.48
+        let y = headCY + headSize * 0.05
+
+        let base = Circle()
             .fill(skin)
             .overlay(
                 Circle().stroke(Color.black.opacity(0.5), lineWidth: 1.4)
             )
             .frame(width: sz, height: sz)
-            .position(
-                x: canvasW / 2 + side * headSize * 0.48,
-                y: headCY + headSize * 0.05
-            )
+
+        return base.position(x: x, y: y)
     }
 
     // MARK: - Голова
 
     private var headShape: some View {
-        RoundedRectangle(cornerRadius: headSize * 0.5)
+        let radius = headSize * 0.5
+        let w = headSize
+        let h = headSize * 1.02
+
+        let base = RoundedRectangle(cornerRadius: radius)
             .fill(skin)
             .overlay(
-                RoundedRectangle(cornerRadius: headSize * 0.5)
+                RoundedRectangle(cornerRadius: radius)
                     .stroke(Color.black.opacity(0.55), lineWidth: 1.8)
             )
-            .frame(width: headSize, height: headSize * 1.02)
-            .position(x: canvasW / 2, y: headCY)
+            .frame(width: w, height: h)
+
+        return base.position(x: cx, y: headCY)
     }
 
     // MARK: - Брови
@@ -110,14 +117,15 @@ struct AvatarHead: View {
             rotation = side < 0 ? 15 : -15
         }
 
-        return Capsule()
+        let x = cx + side * headSize * 0.19
+        let y = headCY + offsetY
+
+        let base = Capsule()
             .fill(Color.black.opacity(0.85))
             .frame(width: width, height: height)
             .rotationEffect(.degrees(rotation))
-            .position(
-                x: canvasW / 2 + side * headSize * 0.19,
-                y: headCY + offsetY
-            )
+
+        return base.position(x: x, y: y)
     }
 
     // MARK: - Глаза
@@ -132,17 +140,14 @@ struct AvatarHead: View {
     private func eyeView(side: CGFloat) -> some View {
         let size = eyeSize
         let spacing = headSize * 0.20
-        let cy = headCY - headSize * 0.06
+        let x = cx + side * spacing
+        let y = headCY - headSize * 0.06
 
         return ZStack {
-            eyeWhite(size: size)
-                .position(x: canvasW / 2 + side * spacing, y: cy)
-            eyePupil(size: size)
-                .position(x: canvasW / 2 + side * spacing, y: cy)
-            eyeHighlights(size: size)
-                .position(x: canvasW / 2 + side * spacing, y: cy)
-            eyeExtra(size: size)
-                .position(x: canvasW / 2 + side * spacing, y: cy)
+            eyeWhite(size: size).position(x: x, y: y)
+            eyePupil(size: size).position(x: x, y: y)
+            eyeHighlights(size: size).position(x: x, y: y)
+            eyeExtra(size: size).position(x: x, y: y)
         }
     }
 
@@ -171,7 +176,7 @@ struct AvatarHead: View {
     private func eyePupil(size: CGSize) -> some View {
         let pupilW: CGFloat = (player.eyeStyle == 2 || player.eyeStyle == 4)
             ? size.width * 0.5 : size.width * 0.68
-        let pupilH = (player.eyeStyle == 2 || player.eyeStyle == 4)
+        let pupilH: CGFloat = (player.eyeStyle == 2 || player.eyeStyle == 4)
             ? size.height * 0.55 : size.height * 0.68
 
         return Ellipse()
@@ -220,17 +225,17 @@ struct AvatarHead: View {
     private var noseLayer: some View {
         let w = headSize * 0.05
         let h = headSize * 0.035
+        let x = cx
+        let y = headCY + headSize * 0.09
 
-        return Ellipse()
+        let base = Ellipse()
             .fill(skin.opacity(0.9))
             .overlay(
                 Ellipse().stroke(Color.black.opacity(0.4), lineWidth: 1.2)
             )
             .frame(width: w, height: h)
-            .position(
-                x: canvasW / 2,
-                y: headCY + headSize * 0.09
-            )
+
+        return base.position(x: x, y: y)
     }
 
     // MARK: - Рот
@@ -249,85 +254,98 @@ struct AvatarHead: View {
     }
 
     private var smileMouth: some View {
-        TocaSmile()
+        let w = headSize * 0.16
+        let h = headSize * 0.08
+        let y = headCY + headSize * 0.24
+
+        let base = TocaSmile()
             .stroke(
                 Color.black.opacity(0.85),
                 style: StrokeStyle(lineWidth: 2.2, lineCap: .round)
             )
-            .frame(width: headSize * 0.16, height: headSize * 0.08)
-            .position(
-                x: canvasW / 2,
-                y: headCY + headSize * 0.24
-            )
+            .frame(width: w, height: h)
+
+        return base.position(x: cx, y: y)
     }
 
     private var flatMouth: some View {
-        Capsule()
+        let w = headSize * 0.10
+        let y = headCY + headSize * 0.25
+
+        let base = Capsule()
             .fill(Color.black.opacity(0.85))
-            .frame(width: headSize * 0.10, height: 2.2)
-            .position(
-                x: canvasW / 2,
-                y: headCY + headSize * 0.25
-            )
+            .frame(width: w, height: 2.2)
+
+        return base.position(x: cx, y: y)
     }
 
     private var sadMouth: some View {
-        TocaSmile()
+        let w = headSize * 0.16
+        let h = headSize * 0.08
+        let y = headCY + headSize * 0.28
+
+        let base = TocaSmile()
             .stroke(
                 Color.black.opacity(0.85),
                 style: StrokeStyle(lineWidth: 2.2, lineCap: .round)
             )
-            .frame(width: headSize * 0.16, height: headSize * 0.08)
+            .frame(width: w, height: h)
             .rotationEffect(.degrees(180))
-            .position(
-                x: canvasW / 2,
-                y: headCY + headSize * 0.28
-            )
+
+        return base.position(x: cx, y: y)
     }
 
     private var openMouth: some View {
-        Ellipse()
+        let w = headSize * 0.10
+        let h = headSize * 0.13
+        let y = headCY + headSize * 0.26
+
+        let base = Ellipse()
             .fill(Color(hex: "#4A2C2A"))
             .overlay(
                 Ellipse().stroke(Color.black.opacity(0.7), lineWidth: 1.4)
             )
-            .frame(width: headSize * 0.10, height: headSize * 0.13)
-            .position(
-                x: canvasW / 2,
-                y: headCY + headSize * 0.26
-            )
+            .frame(width: w, height: h)
+
+        return base.position(x: cx, y: y)
     }
 
     private var laughMouth: some View {
-        Ellipse()
+        let w = headSize * 0.16
+        let h = headSize * 0.16
+        let innerW = headSize * 0.06
+        let innerH = headSize * 0.04
+        let innerOffset = headSize * 0.03
+        let y = headCY + headSize * 0.26
+
+        let tongue = Ellipse()
+            .fill(Color(hex: "#E85C5C"))
+            .frame(width: innerW, height: innerH)
+            .offset(y: innerOffset)
+
+        let base = Ellipse()
             .fill(Color(hex: "#4A2C2A"))
             .overlay(
                 Ellipse().stroke(Color.black.opacity(0.7), lineWidth: 1.4)
             )
-            .overlay(
-                Ellipse()
-                    .fill(Color(hex: "#E85C5C"))
-                    .frame(width: headSize * 0.06, height: headSize * 0.04)
-                    .offset(y: headSize * 0.03)
-            )
-            .frame(width: headSize * 0.16, height: headSize * 0.16)
-            .position(
-                x: canvasW / 2,
-                y: headCY + headSize * 0.26
-            )
+            .overlay(tongue)
+            .frame(width: w, height: h)
+
+        return base.position(x: cx, y: y)
     }
 
     private var surprisedMouth: some View {
-        Circle()
+        let sz = headSize * 0.08
+        let y = headCY + headSize * 0.26
+
+        let base = Circle()
             .fill(Color(hex: "#4A2C2A"))
             .overlay(
                 Circle().stroke(Color.black.opacity(0.7), lineWidth: 1.4)
             )
-            .frame(width: headSize * 0.08, height: headSize * 0.08)
-            .position(
-                x: canvasW / 2,
-                y: headCY + headSize * 0.26
-            )
+            .frame(width: sz, height: sz)
+
+        return base.position(x: cx, y: y)
     }
 
     // MARK: - Румянец
@@ -340,12 +358,15 @@ struct AvatarHead: View {
     }
 
     private func blush(side: CGFloat) -> some View {
-        Ellipse()
+        let w = headSize * 0.14
+        let h = headSize * 0.08
+        let x = cx + side * headSize * 0.32
+        let y = headCY + headSize * 0.15
+
+        let base = Ellipse()
             .fill(Color(hex: "#F4A0A0").opacity(0.45))
-            .frame(width: headSize * 0.14, height: headSize * 0.08)
-            .position(
-                x: canvasW / 2 + side * headSize * 0.32,
-                y: headCY + headSize * 0.15
-            )
+            .frame(width: w, height: h)
+
+        return base.position(x: x, y: y)
     }
 }
