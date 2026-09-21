@@ -67,7 +67,7 @@ enum AgeGroup: String, Codable, CaseIterable, Identifiable {
     }
 }
 
-// MARK: - Слой отрисовки
+// MARK: - Слой
 
 enum LayerSlot: String, Codable, CaseIterable, Identifiable {
     case hair       = "Волосы"
@@ -85,7 +85,7 @@ enum LayerSlot: String, Codable, CaseIterable, Identifiable {
     }
 }
 
-// MARK: - Локации (здания на карте)
+// MARK: - Локации
 
 enum LocationID: String, CaseIterable, Identifiable, Codable {
     case home = "Дом"
@@ -159,16 +159,19 @@ struct Player: Identifiable, Codable, Hashable {
 
     var ageGroup: AgeGroup
 
+    // Внешность
     var skinTone: Int
     var hairStyle: Int
     var hairColor: Int
     var eyeStyle: Int
     var eyeColor: Int
+    var eyebrowStyle: Int
     var mouthStyle: Int
     var outfitStyle: Int
     var outfitColor: Int
     var accessory: Int
 
+    // Layering
     var layerOrder: [LayerSlot]
 
     init(id: UUID = UUID(),
@@ -181,6 +184,7 @@ struct Player: Identifiable, Codable, Hashable {
          hairColor: Int = 1,
          eyeStyle: Int = 0,
          eyeColor: Int = 0,
+         eyebrowStyle: Int = 0,
          mouthStyle: Int = 0,
          outfitStyle: Int = 0,
          outfitColor: Int = 0,
@@ -196,6 +200,7 @@ struct Player: Identifiable, Codable, Hashable {
         self.hairColor = hairColor
         self.eyeStyle = eyeStyle
         self.eyeColor = eyeColor
+        self.eyebrowStyle = eyebrowStyle
         self.mouthStyle = mouthStyle
         self.outfitStyle = outfitStyle
         self.outfitColor = outfitColor
@@ -207,7 +212,7 @@ struct Player: Identifiable, Codable, Hashable {
         case id, name, voiceFileName, imageName
         case ageGroup
         case skinTone, hairStyle, hairColor
-        case eyeStyle, eyeColor, mouthStyle
+        case eyeStyle, eyeColor, eyebrowStyle, mouthStyle
         case outfitStyle, outfitColor, accessory
         case layerOrder
     }
@@ -224,6 +229,7 @@ struct Player: Identifiable, Codable, Hashable {
         hairColor = try c.decodeIfPresent(Int.self, forKey: .hairColor) ?? 1
         eyeStyle = try c.decodeIfPresent(Int.self, forKey: .eyeStyle) ?? 0
         eyeColor = try c.decodeIfPresent(Int.self, forKey: .eyeColor) ?? 0
+        eyebrowStyle = try c.decodeIfPresent(Int.self, forKey: .eyebrowStyle) ?? 0
         mouthStyle = try c.decodeIfPresent(Int.self, forKey: .mouthStyle) ?? 0
         outfitStyle = try c.decodeIfPresent(Int.self, forKey: .outfitStyle) ?? 0
         outfitColor = try c.decodeIfPresent(Int.self, forKey: .outfitColor) ?? 0
