@@ -1,334 +1,527 @@
 import SwiftUI
 
 struct CharacterCreatorView: View {
-    @EnvironmentObject var store: CharacterStore
-    @Environment(\.dismiss) var dismiss
-    var existing: Player? = nil
-    var onSave: ((Player) -> Void)? = nil
 
-    @State private var draft: Player
-    @State private var category: CreatorCategory = .skin
+    @EnvironmentObject var characterStore: CharacterStore
+    @Environment(\.dismiss) private var dismiss
 
-    enum CreatorCategory: String, CaseIterable {
-        case skin = "Кожа"
-        case hair = "Причёска"
-        case hairColor = "Волосы"
-        case eyes = "Глаза"
-        case eyeColor = "Цвет глаз"
-        case mouth = "Рот"
-        case outfit = "Одежда"
-        case outfitColor = "Цвет одежды"
-        case accessory = "Аксессуар"
-    }
+    @State private var draft: Player = Player(name: "Друг")
+    @State private var editingName: String = ""
 
-    init(existing: Player? = nil, onSave: ((Player) -> Void)? = nil) {
-        self.existing = existing
-        self.onSave = onSave
-        let initial = existing ?? Player(
-            skinTone: Int.random(in: 0..<Palette.skinTones.count),
-            hairStyle: Int.random(in: 0..<9),
-            hairColor: Int.random(in: 0..<Palette.hairColors.count),
-            outfitStyle: Int.random(in: 0..<Palette.outfitStyleNames.count),
-            outfitColor: Int.random(in: 0..<Palette.outfitColors.count)
-        )
-        _draft = State(initialValue: initial)
-    }
+    var isEditingExisting: Bool = false
 
     var body: some View {
         NavigationStack {
             ZStack {
-                LinearGradient(
-                    colors: [Color(hex: "#FDF6EC"), Color(hex: "#FCE7F3")],
-                    startPoint: .top, endPoint: .bottom
-                ).ignoresSafeArea()
+                Color(hex: "#FDF6EC").ignoresSafeArea()
 
-                VStack(spacing: 0) {
-                    previewArea
-                    categoryTabs
-                    optionsArea
-                    nameField
+                ScrollView {
+                    VStack(spacing: 20) {
+
+                        previewSection
+
+                        nameSection
+
+                        ageSection
+
+                        skinSection
+
+                        hairSection
+
+                        eyesSection
+
+                        mouthSection
+
+                        outfitSection
+
+                        accessorySection
+
+                        layerSection
+
+                        Spacer(minLength: 40)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 16)
                 }
             }
-            .navigationTitle(existing == nil ? "Новый друг" : "Редактировать")
+            .navigationTitle(isEditingExisting ? "Редактор" : "Создание персонажа")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Отмена") { dismiss() }
-                        .foregroundColor(Color(hex: "#6B7280"))
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Готово") { save() }
-                        .bold()
                         .foregroundColor(Color(hex: "#3B82F6"))
                 }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        saveCharacter()
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "checkmark.circle.fill")
+                            Text("Сохранить")
+                        }
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .foregroundColor(Color(hex: "#22C55E"))
+                    }
+                }
             }
+        }
+        .onAppear {
+            editingName = draft.name
         }
     }
 
     // MARK: - Превью
-    var previewArea: some View {
+
+    private var previewSection: some View {
         ZStack {
-            // Подложка-круг
-            Circle()
-                .fill(Color.white)
-                .frame(width: 230, height: 230)
-                .shadow(color: .black.opacity(0.08), radius: 12, y: 6)
-
-            AvatarView(player: draft, size: 200)
-        }
-        .padding(.top, 8)
-        .padding(.bottom, 6)
-    }
-
-    // MARK: - Вкладки категорий
-    var categoryTabs: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(CreatorCategory.allCases, id: \.self) { cat in
-                    Button {
-                        withAnimation(.easeInOut(duration: 0.15)) { category = cat }
-                    } label: {
-                        Text(cat.rawValue)
-                            .font(.system(size: 13, weight: .semibold, design: .rounded))
-                            .foregroundColor(category == cat ? .white : Color(hex: "#4B5563"))
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 8)
-                            .background(
-                                Capsule().fill(category == cat
-                                               ? Color(hex: "#3B82F6")
-                                               : Color.white)
-                            )
-                            .overlay(Capsule().stroke(Color(hex: "#E5E7EB"), lineWidth: 1))
-                    }
-                }
-            }
-            .padding(.horizontal, 16)
-        }
-        .padding(.vertical, 6)
-    }
-
-    // MARK: - Опции под вкладкой
-    var optionsArea: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 12) {
-                switch category {
-                case .skin:
-                    ForEach(0..<Palette.skinTones.count, id: \.self) { i in
-                        colorCircle(color: Palette.skinTones[i], selected: draft.skinTone == i) {
-                            draft.skinTone = i
-                        }
-                    }
-                case .hairColor:
-                    ForEach(0..<Palette.hairColors.count, id: \.self) { i in
-                        colorCircle(color: Palette.hairColors[i], selected: draft.hairColor == i) {
-                            draft.hairColor = i
-                        }
-                    }
-                case .eyeColor:
-                    ForEach(0..<Palette.eyeColors.count, id: \.self) { i in
-                        colorCircle(color: Palette.eyeColors[i], selected: draft.eyeColor == i) {
-                            draft.eyeColor = i
-                        }
-                    }
-                case .outfitColor:
-                    ForEach(0..<Palette.outfitColors.count, id: \.self) { i in
-                        colorCircle(color: Palette.outfitColors[i], selected: draft.outfitColor == i) {
-                            draft.outfitColor = i
-                        }
-                    }
-                case .hair:
-                    ForEach(0..<Palette.hairStyleNames.count, id: \.self) { i in
-                        styleButton(
-                            title: Palette.hairStyleNames[i],
-                            preview: AnyView(
-                                AvatarView(player: playerWithHair(i), size: 60)
-                            ),
-                            selected: draft.hairStyle == i
-                        ) { draft.hairStyle = i }
-                    }
-                case .eyes:
-                    ForEach(0..<Palette.eyeStyleNames.count, id: \.self) { i in
-                        styleButton(
-                            title: Palette.eyeStyleNames[i],
-                            preview: AnyView(eyePreview(style: i)),
-                            selected: draft.eyeStyle == i
-                        ) { draft.eyeStyle = i }
-                    }
-                case .mouth:
-                    ForEach(0..<Palette.mouthStyleNames.count, id: \.self) { i in
-                        styleButton(
-                            title: Palette.mouthStyleNames[i],
-                            preview: AnyView(mouthPreview(style: i)),
-                            selected: draft.mouthStyle == i
-                        ) { draft.mouthStyle = i }
-                    }
-                case .outfit:
-                    ForEach(0..<Palette.outfitStyleNames.count, id: \.self) { i in
-                        styleButton(
-                            title: Palette.outfitStyleNames[i],
-                            preview: AnyView(
-                                AvatarView(player: playerWithOutfit(i), size: 60)
-                            ),
-                            selected: draft.outfitStyle == i
-                        ) { draft.outfitStyle = i }
-                    }
-                case .accessory:
-                    ForEach(0..<Palette.accessoryNames.count, id: \.self) { i in
-                        styleButton(
-                            title: Palette.accessoryNames[i],
-                            preview: AnyView(
-                                AvatarView(player: playerWithAccessory(i), size: 60)
-                            ),
-                            selected: draft.accessory == i
-                        ) { draft.accessory = i }
-                    }
-                }
-            }
-            .padding(.horizontal, 16)
-        }
-        .frame(height: 110)
-    }
-
-    // MARK: - Поле имени
-    var nameField: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "person.fill")
-                .foregroundColor(Color(hex: "#9CA3AF"))
-            TextField("Имя персонажа", text: $draft.name)
-                .font(.system(size: 17, weight: .semibold, design: .rounded))
-                .foregroundColor(Color(hex: "#111827"))
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
-        .background(
-            RoundedRectangle(cornerRadius: 14).fill(Color.white)
-                .shadow(color: .black.opacity(0.05), radius: 6, y: 3)
-        )
-        .padding(.horizontal, 16)
-        .padding(.top, 8)
-        .padding(.bottom, 20)
-    }
-
-    // MARK: - Вспомогательные для превью
-    private func playerWithHair(_ i: Int) -> Player {
-        var p = draft; p.hairStyle = i; return p
-    }
-    private func playerWithOutfit(_ i: Int) -> Player {
-        var p = draft; p.outfitStyle = i; return p
-    }
-    private func playerWithAccessory(_ i: Int) -> Player {
-        var p = draft; p.accessory = i; return p
-    }
-
-    func colorCircle(color: Color, selected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            ZStack {
-                Circle().fill(color)
-                    .frame(width: 58, height: 58)
-                    .overlay(
-                        Circle().stroke(selected ? Color(hex: "#3B82F6") : Color(hex: "#E5E7EB"),
-                                       lineWidth: selected ? 4 : 2)
+            RoundedRectangle(cornerRadius: 24)
+                .fill(
+                    LinearGradient(
+                        colors: [Color(hex: "#FCE7F3"), Color(hex: "#FDF6EC")],
+                        startPoint: .top, endPoint: .bottom
                     )
-                if selected {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundColor(.white)
-                        .shadow(color: .black.opacity(0.3), radius: 2)
-                }
-            }
+                )
+                .frame(height: 240)
+                .shadow(color: .black.opacity(0.06), radius: 10, y: 4)
+
+            AvatarView(player: draft, size: 220)
         }
     }
 
-    func styleButton(title: String, preview: AnyView, selected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            VStack(spacing: 4) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.white)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(selected ? Color(hex: "#3B82F6") : Color(hex: "#E5E7EB"),
-                                       lineWidth: selected ? 3 : 1)
+    // MARK: - Имя
+
+    private var nameSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            sectionTitle("Имя")
+            TextField("Имя персонажа", text: $editingName)
+                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                .padding(12)
+                .background(RoundedRectangle(cornerRadius: 12).fill(Color.white))
+                .shadow(color: .black.opacity(0.05), radius: 4, y: 2)
+                .onChange(of: editingName) { newValue in
+                    draft.name = newValue.isEmpty ? "Друг" : newValue
+                }
+        }
+    }
+
+    // MARK: - Возраст
+
+    private var ageSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionTitle("Возраст")
+            HStack(spacing: 10) {
+                ForEach(AgeGroup.allCases) { age in
+                    Button {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            draft.ageGroup = age
+                        }
+                    } label: {
+                        VStack(spacing: 4) {
+                            Image(systemName: age.icon)
+                                .font(.system(size: 20, weight: .semibold))
+                                .foregroundColor(draft.ageGroup == age
+                                                 ? .white
+                                                 : Color(hex: "#6B7280"))
+                            Text(age.rawValue)
+                                .font(.system(size: 10, weight: .semibold, design: .rounded))
+                                .foregroundColor(draft.ageGroup == age
+                                                 ? .white
+                                                 : Color(hex: "#6B7280"))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 14)
+                                .fill(draft.ageGroup == age
+                                      ? Color(hex: "#3B82F6")
+                                      : Color.white)
                         )
-                    preview
-                        .frame(width: 60, height: 60)
-                        .scaleEffect(0.95)
-                        .clipped()
+                        .shadow(color: .black.opacity(0.05), radius: 3, y: 1)
+                    }
+                    .buttonStyle(.plain)
                 }
-                .frame(width: 78, height: 78)
-
-                Text(title)
-                    .font(.system(size: 10, weight: .medium, design: .rounded))
-                    .foregroundColor(selected ? Color(hex: "#3B82F6") : Color(hex: "#6B7280"))
-                    .lineLimit(1)
             }
         }
     }
 
-    func eyePreview(style: Int) -> some View {
-        let d: CGFloat = {
-            switch style {
-            case 0: return 26
-            case 1: return 34
-            case 2: return 20
-            case 3: return 30
-            case 4: return 22
-            default: return 28
-            }
-        }()
-        return ZStack {
-            Circle().fill(Color.white).frame(width: d, height: d)
-            Circle().fill(Palette.eyeColors[safe: draft.eyeColor] ?? .blue)
-                .frame(width: d * 0.68, height: d * 0.68)
-            Circle().fill(Color.black)
-                .frame(width: d * 0.38, height: d * 0.38)
-            Circle().fill(Color.white)
-                .frame(width: d * 0.16, height: d * 0.16)
-                .offset(x: -d * 0.16, y: -d * 0.16)
+    // MARK: - Кожа
+
+    private var skinSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionTitle("Цвет кожи")
+            colorRow(
+                colors: Palette.skinTones,
+                selectedIndex: draft.skinTone,
+                onSelect: { draft.skinTone = $0 }
+            )
         }
     }
 
-    func mouthPreview(style: Int) -> some View {
-        Group {
-            switch style {
-            case 0:
-                SmileShape().stroke(Color(hex: "#8B2C1A"), lineWidth: 3)
-                    .frame(width: 30, height: 15)
-            case 1:
-                ZStack {
-                    FilledSmileShape().fill(Color(hex: "#C0392B")).frame(width: 30, height: 22)
-                    FilledSmileShape().fill(Color.white).frame(width: 24, height: 8).offset(y: -6)
+    // MARK: - Волосы
+
+    private var hairSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionTitle("Причёска")
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    ForEach(0..<Palette.hairNames.count, id: \.self) { i in
+                        Button {
+                            draft.hairStyle = i
+                        } label: {
+                            VStack(spacing: 4) {
+                                ZStack {
+                                    Circle()
+                                        .fill(Color(hex: "#FDF6EC"))
+                                        .frame(width: 44, height: 44)
+                                    Text("\(i + 1)")
+                                        .font(.system(size: 14, weight: .bold))
+                                        .foregroundColor(Color(hex: "#4B5563"))
+                                }
+                                Text(Palette.hairNames[i])
+                                    .font(.system(size: 9, weight: .medium))
+                                    .foregroundColor(Color(hex: "#6B7280"))
+                            }
+                            .padding(6)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(draft.hairStyle == i
+                                          ? Color(hex: "#3B82F6").opacity(0.15)
+                                          : Color.white)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(draft.hairStyle == i
+                                            ? Color(hex: "#3B82F6")
+                                            : Color.clear,
+                                            lineWidth: 2)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
-            case 2:
-                Capsule().fill(Color(hex: "#C0392B")).frame(width: 30, height: 4)
-            case 3:
-                Capsule().fill(Color(hex: "#8B2C1A")).frame(width: 26, height: 4)
-            case 4:
-                Circle().fill(Color(hex: "#8B2C1A")).frame(width: 16, height: 16)
-            default:
+                .padding(.vertical, 4)
+            }
+
+            sectionTitle("Цвет волос")
+            colorRow(
+                colors: Palette.hairColors,
+                selectedIndex: draft.hairColor,
+                onSelect: { draft.hairColor = $0 }
+            )
+        }
+    }
+
+    // MARK: - Глаза
+
+    private var eyesSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionTitle("Форма глаз")
+            HStack(spacing: 8) {
+                ForEach(0..<6, id: \.self) { i in
+                    Button {
+                        draft.eyeStyle = i
+                    } label: {
+                        Text("\(i + 1)")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundColor(draft.eyeStyle == i
+                                             ? .white
+                                             : Color(hex: "#4B5563"))
+                            .frame(width: 40, height: 40)
+                            .background(
+                                Circle().fill(draft.eyeStyle == i
+                                              ? Color(hex: "#3B82F6")
+                                              : Color.white)
+                            )
+                            .overlay(
+                                Circle().stroke(Color.black.opacity(0.08), lineWidth: 1)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+                Spacer()
+            }
+
+            sectionTitle("Цвет глаз")
+            colorRow(
+                colors: Palette.eyeColors,
+                selectedIndex: draft.eyeColor,
+                onSelect: { draft.eyeColor = $0 }
+            )
+        }
+    }
+
+    // MARK: - Рот
+
+    private var mouthSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionTitle("Рот")
+            HStack(spacing: 8) {
+                ForEach(0..<Palette.mouthNames.count, id: \.self) { i in
+                    Button {
+                        draft.mouthStyle = i
+                    } label: {
+                        VStack(spacing: 2) {
+                            Image(systemName: mouthIcon(i))
+                                .font(.system(size: 20))
+                                .foregroundColor(draft.mouthStyle == i
+                                                 ? .white
+                                                 : Color(hex: "#4B5563"))
+                            Text(Palette.mouthNames[i])
+                                .font(.system(size: 8, weight: .medium))
+                                .foregroundColor(draft.mouthStyle == i
+                                                 ? .white
+                                                 : Color(hex: "#6B7280"))
+                        }
+                        .frame(width: 52, height: 52)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(draft.mouthStyle == i
+                                      ? Color(hex: "#3B82F6")
+                                      : Color.white)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+                Spacer()
+            }
+        }
+    }
+
+    private func mouthIcon(_ i: Int) -> String {
+        switch i {
+        case 0: return "face.smiling"
+        case 1: return "minus"
+        case 2: return "face.dashed"
+        case 3: return "circle"
+        case 4: return "face.smiling.inverse"
+        default: return "circle.dashed"
+        }
+    }
+
+    // MARK: - Одежда
+
+    private var outfitSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionTitle("Одежда")
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    ForEach(0..<Palette.outfitNames.count, id: \.self) { i in
+                        Button {
+                            draft.outfitStyle = i
+                        } label: {
+                            VStack(spacing: 4) {
+                                ZStack {
+                                    Circle()
+                                        .fill(Color(hex: "#FDF6EC"))
+                                        .frame(width: 44, height: 44)
+                                    Image(systemName: "tshirt.fill")
+                                        .font(.system(size: 18))
+                                        .foregroundColor(Color(hex: "#4B5563"))
+                                }
+                                Text(Palette.outfitNames[i])
+                                    .font(.system(size: 9, weight: .medium))
+                                    .foregroundColor(Color(hex: "#6B7280"))
+                            }
+                            .padding(6)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(draft.outfitStyle == i
+                                          ? Color(hex: "#3B82F6").opacity(0.15)
+                                          : Color.white)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(draft.outfitStyle == i
+                                            ? Color(hex: "#3B82F6")
+                                            : Color.clear,
+                                            lineWidth: 2)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+
+            sectionTitle("Цвет одежды")
+            colorRow(
+                colors: Palette.outfitColors,
+                selectedIndex: draft.outfitColor,
+                onSelect: { draft.outfitColor = $0 }
+            )
+        }
+    }
+
+    // MARK: - Аксессуар
+
+    private var accessorySection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionTitle("Аксессуар")
+            ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
-                    SmileShape().stroke(Color(hex: "#8B2C1A"), lineWidth: 2.5)
-                        .frame(width: 10, height: 8)
-                    SmileShape().stroke(Color(hex: "#8B2C1A"), lineWidth: 2.5)
-                        .frame(width: 10, height: 8)
+                    ForEach(0..<Palette.accessoryNames.count, id: \.self) { i in
+                        Button {
+                            draft.accessory = i
+                        } label: {
+                            Text(Palette.accessoryNames[i])
+                                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                                .foregroundColor(draft.accessory == i
+                                                 ? .white
+                                                 : Color(hex: "#4B5563"))
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 8)
+                                .background(
+                                    Capsule().fill(draft.accessory == i
+                                                   ? Color(hex: "#3B82F6")
+                                                   : Color.white)
+                                )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+        }
+    }
+
+    // MARK: - Слои (layering)
+
+    private var layerSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionTitle("Порядок слоёв (что поверх чего)")
+
+            Text("Нажми ↑ чтобы поднять слой вперёд, ↓ чтобы убрать назад")
+                .font(.system(size: 11, design: .rounded))
+                .foregroundColor(Color(hex: "#9CA3AF"))
+
+            VStack(spacing: 8) {
+                ForEach(Array(draft.layerOrder.enumerated()), id: \.offset) { index, slot in
+                    HStack(spacing: 12) {
+                        ZStack {
+                            Circle()
+                                .fill(Color(hex: "#E5E7EB"))
+                                .frame(width: 32, height: 32)
+                            Text("\(index + 1)")
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundColor(Color(hex: "#4B5563"))
+                        }
+
+                        Image(systemName: slot.icon)
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(Color(hex: "#3B82F6"))
+                            .frame(width: 24)
+
+                        Text(slot.rawValue)
+                            .font(.system(size: 15, weight: .semibold, design: .rounded))
+                            .foregroundColor(Color(hex: "#111827"))
+
+                        Spacer()
+
+                        // Кнопка вверх (ближе к началу = сзади)
+                        Button {
+                            moveUp(index)
+                        } label: {
+                            Image(systemName: "arrow.up")
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundColor(index == 0
+                                                 ? Color(hex: "#D1D5DB")
+                                                 : Color(hex: "#3B82F6"))
+                                .frame(width: 32, height: 32)
+                                .background(Circle().fill(Color(hex: "#F3F4F6")))
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(index == 0)
+
+                        // Кнопка вниз (в конец = спереди)
+                        Button {
+                            moveDown(index)
+                        } label: {
+                            Image(systemName: "arrow.down")
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundColor(index == draft.layerOrder.count - 1
+                                                 ? Color(hex: "#D1D5DB")
+                                                 : Color(hex: "#3B82F6"))
+                                .frame(width: 32, height: 32)
+                                .background(Circle().fill(Color(hex: "#F3F4F6")))
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(index == draft.layerOrder.count - 1)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14)
+                            .fill(Color.white)
+                    )
+                    .shadow(color: .black.opacity(0.04), radius: 4, y: 2)
                 }
             }
+        }
+    }
+
+    private func moveUp(_ index: Int) {
+        guard index > 0, index < draft.layerOrder.count else { return }
+        var order = draft.layerOrder
+        order.swapAt(index, index - 1)
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+            draft.layerOrder = order
+        }
+    }
+
+    private func moveDown(_ index: Int) {
+        guard index >= 0, index < draft.layerOrder.count - 1 else { return }
+        var order = draft.layerOrder
+        order.swapAt(index, index + 1)
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+            draft.layerOrder = order
+        }
+    }
+
+    // MARK: - Общие компоненты
+
+    private func sectionTitle(_ text: String) -> some View {
+        Text(text.uppercased())
+            .font(.system(size: 11, weight: .bold, design: .rounded))
+            .foregroundColor(Color(hex: "#6B7280"))
+            .padding(.horizontal, 4)
+    }
+
+    private func colorRow(colors: [Color],
+                          selectedIndex: Int,
+                          onSelect: @escaping (Int) -> Void) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 10) {
+                ForEach(0..<colors.count, id: \.self) { i in
+                    Button {
+                        onSelect(i)
+                    } label: {
+                        ZStack {
+                            Circle()
+                                .fill(colors[i])
+                                .frame(width: 40, height: 40)
+                                .overlay(
+                                    Circle()
+                                        .stroke(Color.black.opacity(0.1), lineWidth: 1)
+                                )
+                            if selectedIndex == i {
+                                Circle()
+                                    .stroke(Color(hex: "#3B82F6"), lineWidth: 3)
+                                    .frame(width: 46, height: 46)
+                            }
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 4)
+            .padding(.vertical, 4)
         }
     }
 
     // MARK: - Сохранение
-    func save() {
-        var final = draft
-        if final.name.trimmingCharacters(in: .whitespaces).isEmpty {
-            final.name = "Друг"
-        }
-        if let onSave = onSave {
-            onSave(final)
-        } else if existing != nil {
-            store.update(final)
-        } else {
-            store.add(final)
-        }
+
+    private func saveCharacter() {
+        characterStore.add(draft)
         dismiss()
     }
 }
