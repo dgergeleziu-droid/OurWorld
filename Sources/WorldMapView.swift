@@ -80,10 +80,16 @@ struct WorldMapView: View {
                     }
                     .allowsHitTesting(false)
 
-                    // Здания (в порядке глубины)
+                    // Здания и парк (в порядке глубины)
                     ForEach(Array(sortedLocations.enumerated()), id: \.element.id) { index, location in
                         NavigationLink(value: location) {
-                            IsoBuildingView(location: location)
+                            Group {
+                                if location == .park {
+                                    IsoParkView()
+                                } else {
+                                    IsoBuildingView(location: location)
+                                }
+                            }
                         }
                         .buttonStyle(BounceButtonStyle())
                         .position(
@@ -528,6 +534,184 @@ struct IsoBuildingView: View {
     }
 }
 
+// MARK: - 3D Парк (без здания)
+
+struct IsoParkView: View {
+
+    private let frameW: CGFloat = 150
+    private let frameH: CGFloat = 160
+
+    var body: some View {
+        ZStack {
+            groundPad
+            pathCross
+            bench
+            treeBig
+            treeSmall
+            bushLeft
+            bushRight
+            flowers
+        }
+        .frame(width: frameW, height: frameH)
+    }
+
+    // Земляная площадка (трапеция как у iso-мира)
+    private var groundPad: some View {
+        ZStack {
+            ParkGroundShape()
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color(hex: "#B5E58A"),
+                            Color(hex: "#8FD16B")
+                        ],
+                        startPoint: .top, endPoint: .bottom
+                    )
+                )
+                .overlay(
+                    ParkGroundShape()
+                        .stroke(Color.black.opacity(0.25), lineWidth: 1.5)
+                )
+                .frame(width: frameW * 0.95, height: frameH * 0.5)
+                .offset(y: frameH * 0.18)
+
+            Ellipse()
+                .fill(Color.black.opacity(0.18))
+                .frame(width: frameW * 0.9, height: 10)
+                .blur(radius: 3)
+                .offset(y: frameH * 0.42)
+        }
+    }
+
+    // Перекрещивающиеся дорожки из песка
+    private var pathCross: some View {
+        ZStack {
+            Rectangle()
+                .fill(Color(hex: "#E8C99B"))
+                .frame(width: 14, height: frameH * 0.45)
+                .offset(y: frameH * 0.2)
+                .opacity(0.9)
+
+            Ellipse()
+                .fill(Color(hex: "#E8C99B"))
+                .frame(width: 90, height: 30)
+                .offset(y: frameH * 0.18)
+                .opacity(0.9)
+        }
+    }
+
+    // Скамейка
+    private var bench: some View {
+        ZStack {
+            HStack(spacing: 22) {
+                Capsule().fill(Color(hex: "#5C3B1E"))
+                    .frame(width: 4, height: 12)
+                Capsule().fill(Color(hex: "#5C3B1E"))
+                    .frame(width: 4, height: 12)
+            }
+            .offset(y: 6)
+
+            RoundedRectangle(cornerRadius: 3)
+                .fill(Color(hex: "#A6714A"))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 3)
+                        .stroke(Color.black.opacity(0.4), lineWidth: 1.3)
+                )
+                .frame(width: 46, height: 8)
+
+            RoundedRectangle(cornerRadius: 2)
+                .fill(Color(hex: "#A6714A"))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 2)
+                        .stroke(Color.black.opacity(0.4), lineWidth: 1.2)
+                )
+                .frame(width: 46, height: 4)
+                .offset(y: -10)
+
+            HStack(spacing: 4) {
+                ForEach(0..<4, id: \.self) { _ in
+                    Capsule()
+                        .fill(Color(hex: "#5C3B1E"))
+                        .frame(width: 3, height: 8)
+                }
+            }
+            .offset(y: -5)
+        }
+        .position(x: frameW * 0.5, y: frameH * 0.72)
+    }
+
+    // Большое дерево (главный акцент парка)
+    private var treeBig: some View {
+        IsoTree(size: 70)
+            .position(x: frameW * 0.27, y: frameH * 0.42)
+    }
+
+    // Дерево поменьше
+    private var treeSmall: some View {
+        IsoTree(size: 48)
+            .position(x: frameW * 0.76, y: frameH * 0.48)
+    }
+
+    // Кусты
+    private var bushLeft: some View {
+        IsoBush(size: 28)
+            .position(x: frameW * 0.12, y: frameH * 0.72)
+    }
+    private var bushRight: some View {
+        IsoBush(size: 32)
+            .position(x: frameW * 0.88, y: frameH * 0.7)
+    }
+
+    // Клумбы с цветами
+    private var flowers: some View {
+        ZStack {
+            flowerDots(count: 5, x: frameW * 0.55, y: frameH * 0.82,
+                       spreadX: 40, spreadY: 8, color: Color(hex: "#EC4899"))
+            flowerDots(count: 5, x: frameW * 0.20, y: frameH * 0.86,
+                       spreadX: 34, spreadY: 6, color: Color(hex: "#FBBF24"))
+            flowerDots(count: 4, x: frameW * 0.80, y: frameH * 0.86,
+                       spreadX: 30, spreadY: 6, color: Color(hex: "#F87171"))
+        }
+    }
+
+    private func flowerDots(count: Int, x: CGFloat, y: CGFloat,
+                            spreadX: CGFloat, spreadY: CGFloat,
+                            color: Color) -> some View {
+        ZStack {
+            ForEach(0..<count, id: \.self) { i in
+                let t = CGFloat(i) / CGFloat(max(count - 1, 1))
+                let dx = (t - 0.5) * spreadX
+                let dy = sin(t * .pi) * spreadY - spreadY * 0.5
+                ZStack {
+                    Circle()
+                        .fill(color)
+                        .frame(width: 6, height: 6)
+                    Circle()
+                        .fill(Color.white.opacity(0.8))
+                        .frame(width: 2, height: 2)
+                }
+                .offset(x: dx, y: dy)
+            }
+        }
+        .position(x: x, y: y)
+    }
+}
+
+// Трапеция-площадка под парком
+struct ParkGroundShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        let w = rect.width
+        let h = rect.height
+        p.move(to: CGPoint(x: w * 0.15, y: 0))
+        p.addLine(to: CGPoint(x: w * 0.85, y: 0))
+        p.addLine(to: CGPoint(x: w, y: h))
+        p.addLine(to: CGPoint(x: 0, y: h))
+        p.closeSubpath()
+        return p
+    }
+}
+
 // MARK: - 3D деревья и кусты
 
 struct IsoTree: View {
@@ -602,7 +786,6 @@ struct RightWallShape: Shape {
 
     func path(in rect: CGRect) -> Path {
         var p = Path()
-        // rect size = (depthX, wallH + depthY)
         p.move(to: CGPoint(x: 0, y: depthY))
         p.addLine(to: CGPoint(x: depthX, y: 0))
         p.addLine(to: CGPoint(x: depthX, y: wallH))
@@ -620,7 +803,6 @@ struct RightRoofShape: Shape {
 
     func path(in rect: CGRect) -> Path {
         var p = Path()
-        // rect size = (wallHalfW + ridgeDx, roofH + ridgeDy)
         p.move(to: CGPoint(x: 0, y: ridgeDy))
         p.addLine(to: CGPoint(x: wallHalfW, y: roofH + ridgeDy))
         p.addLine(to: CGPoint(x: wallHalfW + ridgeDx, y: roofH))
