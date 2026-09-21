@@ -36,7 +36,6 @@ enum AgeGroup: String, Codable, CaseIterable, Identifiable {
         }
     }
 
-    /// Общий масштаб фигуры внутри кадра (1.0 = как Аня/Демьян)
     var bodyScale: CGFloat {
         switch self {
         case .baby:  return 0.62
@@ -47,7 +46,6 @@ enum AgeGroup: String, Codable, CaseIterable, Identifiable {
         }
     }
 
-    /// Множитель размера головы (чем младше — тем больше голова)
     var headMultiplier: CGFloat {
         switch self {
         case .baby:  return 1.42
@@ -58,7 +56,6 @@ enum AgeGroup: String, Codable, CaseIterable, Identifiable {
         }
     }
 
-    /// Высота ног относительно тела
     var legRatio: CGFloat {
         switch self {
         case .baby:  return 0.32
@@ -88,7 +85,7 @@ enum LayerSlot: String, Codable, CaseIterable, Identifiable {
     }
 }
 
-// MARK: - Локации
+// MARK: - Локации (здания на карте)
 
 enum LocationID: String, CaseIterable, Identifiable, Codable {
     case home = "Дом"
@@ -141,13 +138,13 @@ enum LocationID: String, CaseIterable, Identifiable, Codable {
 
     var mapPosition: CGPoint {
         switch self {
-        case .home:     return CGPoint(x: 0.22, y: 0.28)
-        case .cafe:     return CGPoint(x: 0.62, y: 0.24)
-        case .park:     return CGPoint(x: 0.36, y: 0.55)
-        case .beach:    return CGPoint(x: 0.80, y: 0.50)
-        case .shop:     return CGPoint(x: 0.16, y: 0.74)
-        case .hospital: return CGPoint(x: 0.52, y: 0.80)
-        case .school:   return CGPoint(x: 0.84, y: 0.76)
+        case .home:     return CGPoint(x: 0.20, y: 0.64)
+        case .cafe:     return CGPoint(x: 0.66, y: 0.62)
+        case .park:     return CGPoint(x: 0.42, y: 0.72)
+        case .beach:    return CGPoint(x: 0.82, y: 0.68)
+        case .shop:     return CGPoint(x: 0.15, y: 0.82)
+        case .hospital: return CGPoint(x: 0.50, y: 0.87)
+        case .school:   return CGPoint(x: 0.82, y: 0.83)
         }
     }
 }
@@ -172,8 +169,6 @@ struct Player: Identifiable, Codable, Hashable {
     var outfitColor: Int
     var accessory: Int
 
-    /// Порядок отрисовки: от заднего к переднему.
-    /// По умолчанию: волосы → одежда → аксессуар.
     var layerOrder: [LayerSlot]
 
     init(id: UUID = UUID(),
