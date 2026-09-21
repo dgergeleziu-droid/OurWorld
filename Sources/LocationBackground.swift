@@ -1,20 +1,18 @@
 import SwiftUI
 
 // MARK: - Зона пола
-// Все предметы и персонажи позиционируются только внутри этой зоны.
-// Координаты нормализованные: 0.0 — левый/верхний край, 1.0 — правый/нижний.
+
 struct FloorZone {
     let xMin: Double
     let xMax: Double
-    let yMin: Double   // верх пола (дальний край от зрителя)
-    let yMax: Double   // низ пола (ближний край к зрителю)
+    let yMin: Double
+    let yMax: Double
 
     static let standard = FloorZone(
         xMin: 0.08, xMax: 0.92,
         yMin: 0.60, yMax: 0.94
     )
 
-    /// Ограничивает точку зоной пола
     func clamp(x: Double, y: Double) -> (x: Double, y: Double) {
         (
             min(max(x, xMin), xMax),
@@ -22,20 +20,19 @@ struct FloorZone {
         )
     }
 
-    /// Центр пола — куда ставить новые предметы
     var center: (x: Double, y: Double) {
         ((xMin + xMax) / 2, (yMin + yMax) / 2)
     }
 }
 
 // MARK: - Фон локации (изометрия)
+
 struct LocationBackground: View {
 
     let location: LocationID
 
     static let floorZone = FloorZone.standard
 
-    // Геометрия комнаты (в долях от размера экрана)
     private let backWallTop: CGFloat    = 0.06
     private let backWallBottom: CGFloat = 0.55
     private let backWallLeft: CGFloat   = 0.15
@@ -47,21 +44,17 @@ struct LocationBackground: View {
             let h = geo.size.height
 
             ZStack {
-                // Потолок
                 ceilingShape(w: w, h: h)
                     .fill(ceilingColor)
 
-                // Боковые стены (трапеции)
                 leftWallShape(w: w, h: h)
                     .fill(sideWallColor)
                 rightWallShape(w: w, h: h)
                     .fill(sideWallColor)
 
-                // Задняя стена
                 backWallShape(w: w, h: h)
                     .fill(backWallColor)
 
-                // Пол (трапеция)
                 floorShape(w: w, h: h)
                     .fill(
                         LinearGradient(
@@ -70,21 +63,18 @@ struct LocationBackground: View {
                         )
                     )
 
-                // Плинтус
                 baseboardShape(w: w, h: h)
                     .fill(baseboardColor)
 
-                // Декор: окно
                 windowView(w: w, h: h)
 
-                // Особый декор для локации
                 locationDecor(w: w, h: h)
             }
         }
         .ignoresSafeArea()
     }
 
-    // MARK: - Формы
+    // MARK: Формы
 
     private func ceilingShape(w: CGFloat, h: CGFloat) -> Path {
         var p = Path()
@@ -148,7 +138,7 @@ struct LocationBackground: View {
         return p
     }
 
-    // MARK: - Окно
+    // MARK: Окно
 
     private func windowView(w: CGFloat, h: CGFloat) -> some View {
         let winW = w * 0.18
@@ -158,31 +148,30 @@ struct LocationBackground: View {
 
         return ZStack {
             RoundedRectangle(cornerRadius: 10)
-                .fill(windowColor)
+                .fill(Color(hex: "#BFE6FF"))
                 .frame(width: winW, height: winH)
 
             RoundedRectangle(cornerRadius: 10)
-                .stroke(borderColor, lineWidth: 6)
+                .stroke(Color.white, lineWidth: 6)
                 .frame(width: winW, height: winH)
 
             Rectangle()
-                .fill(borderColor)
+                .fill(Color.white)
                 .frame(width: 6, height: winH)
 
             Rectangle()
-                .fill(borderColor)
+                .fill(Color.white)
                 .frame(width: winW, height: 6)
         }
         .position(x: cx, y: cy)
     }
 
-    // MARK: - Декор по локации
+    // MARK: Декор по локации
 
     @ViewBuilder
     private func locationDecor(w: CGFloat, h: CGFloat) -> some View {
         switch location {
         case .home:
-            // Картина на стене
             RoundedRectangle(cornerRadius: 6)
                 .fill(Color(hex: "#FFB6C1"))
                 .frame(width: w * 0.09, height: h * 0.16)
@@ -193,7 +182,6 @@ struct LocationBackground: View {
                 .position(x: w * 0.28, y: h * 0.22)
 
         case .cafe:
-            // Кофейная вывеска
             RoundedRectangle(cornerRadius: 10)
                 .fill(Color(hex: "#6F4E37"))
                 .frame(width: w * 0.12, height: h * 0.10)
@@ -205,7 +193,6 @@ struct LocationBackground: View {
                 .position(x: w * 0.28, y: h * 0.22)
 
         case .shop:
-            // Ценник
             RoundedRectangle(cornerRadius: 8)
                 .fill(Color(hex: "#FF8A65"))
                 .frame(width: w * 0.10, height: h * 0.12)
@@ -217,7 +204,6 @@ struct LocationBackground: View {
                 .position(x: w * 0.28, y: h * 0.22)
 
         case .hospital:
-            // Красный крест
             ZStack {
                 Circle().fill(.white).frame(width: 60, height: 60)
                 RoundedRectangle(cornerRadius: 4).fill(Color(hex: "#E85C5C"))
@@ -228,7 +214,6 @@ struct LocationBackground: View {
             .position(x: w * 0.28, y: h * 0.22)
 
         case .school:
-            // Доска
             RoundedRectangle(cornerRadius: 8)
                 .fill(Color(hex: "#2E6B4F"))
                 .frame(width: w * 0.22, height: h * 0.22)
@@ -238,12 +223,12 @@ struct LocationBackground: View {
                 )
                 .position(x: w * 0.32, y: h * 0.24)
 
-        case .park, .beach, .space:
+        case .park, .beach:
             EmptyView()
         }
     }
 
-    // MARK: - Цвета по локации
+    // MARK: Цвета
 
     private var ceilingColor: Color {
         switch location {
@@ -254,7 +239,6 @@ struct LocationBackground: View {
         case .school:   return Color(hex: "#FFFCEB")
         case .park:     return Color(hex: "#BEE3FF")
         case .beach:    return Color(hex: "#BEE3FF")
-        case .space:    return Color(hex: "#0A0A28")
         }
     }
 
@@ -267,7 +251,6 @@ struct LocationBackground: View {
         case .school:   return Color(hex: "#F9E8C2")
         case .park:     return Color(hex: "#A6D98A")
         case .beach:    return Color(hex: "#4FC3F7")
-        case .space:    return Color(hex: "#1A1A4A")
         }
     }
 
@@ -284,22 +267,10 @@ struct LocationBackground: View {
         case .school:   return Color(hex: "#B8875A")
         case .park:     return Color(hex: "#7BC05A")
         case .beach:    return Color(hex: "#FFE9A8")
-        case .space:    return Color(hex: "#2D2D6E")
         }
     }
 
     private var baseboardColor: Color {
         backWallColor.opacity(0.6)
-    }
-
-    private var windowColor: Color {
-        switch location {
-        case .space: return Color(hex: "#0B0B2B")
-        default:     return Color(hex: "#BFE6FF")
-        }
-    }
-
-    private var borderColor: Color {
-        Color(hex: "#FFFFFF")
     }
 }
