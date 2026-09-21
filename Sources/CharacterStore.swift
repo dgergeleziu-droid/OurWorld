@@ -5,9 +5,8 @@ final class CharacterStore: ObservableObject {
 
     @Published var players: [Player] = []
 
-    private let storageKey = "ourworld.players.v1"
+    private let storageKey = "ourworld.players.v2"
 
-    // Стабильные UUID, чтобы у Ани и Демьяна были одинаковые id при каждом запуске
     static let anyaID   = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
     static let demianID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
 
@@ -55,8 +54,6 @@ final class CharacterStore: ObservableObject {
 
     // MARK: - Seed
 
-    /// Идемпотентно: добавляет Аню и Демьяна один раз.
-    /// Если у пользователя уже есть Аня — она не дублируется, добавится только Демьян.
     func seedDefaultCharactersIfNeeded() {
         var changed = false
 
@@ -80,6 +77,7 @@ final class CharacterStore: ObservableObject {
             name: "Аня",
             voiceFileName: nil,
             imageName: "anya",
+            ageGroup: .adult,
             skinTone: 2,
             hairStyle: 3,
             hairColor: 5,
@@ -88,7 +86,8 @@ final class CharacterStore: ObservableObject {
             mouthStyle: 0,
             outfitStyle: 0,
             outfitColor: 3,
-            accessory: 0
+            accessory: 0,
+            layerOrder: [.hair, .outfit, .accessory]
         )
     }
 
@@ -98,6 +97,7 @@ final class CharacterStore: ObservableObject {
             name: "Демьян",
             voiceFileName: nil,
             imageName: "demian",
+            ageGroup: .adult,
             skinTone: 2,
             hairStyle: 0,
             hairColor: 4,
@@ -106,7 +106,8 @@ final class CharacterStore: ObservableObject {
             mouthStyle: 1,
             outfitStyle: 1,
             outfitColor: 1,
-            accessory: 0
+            accessory: 0,
+            layerOrder: [.hair, .outfit, .accessory]
         )
     }
 }
