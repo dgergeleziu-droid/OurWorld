@@ -52,15 +52,7 @@ struct TocaAvatar: View {
             // Тело + ноги + руки
             AvatarBody(player: player, size: size)
 
-            // Голова
-            AvatarHead(
-                player: player,
-                headSize: headSize,
-                headCY: headCY,
-                canvasW: W
-            )
-
-            // Задние длинные волосы
+            // Волосы — ЗА головой (чтобы не перекрывали лицо)
             AvatarHair(
                 player: player,
                 headSize: headSize,
@@ -68,7 +60,15 @@ struct TocaAvatar: View {
                 canvasW: W
             )
 
-            // Аксессуар
+            // Голова — поверх волос
+            AvatarHead(
+                player: player,
+                headSize: headSize,
+                headCY: headCY,
+                canvasW: W
+            )
+
+            // Аксессуар — самый верхний слой (очки, кепка и т.п.)
             AvatarAccessories(
                 player: player,
                 headSize: headSize,
