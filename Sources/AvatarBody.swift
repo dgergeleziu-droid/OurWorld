@@ -202,39 +202,54 @@ struct AvatarBody: View {
         }
     }
 
-    // MARK: - Руки
+    // MARK: - Руки (разведены в стороны, как у Ани и Демьяна)
 
     private var armsLayer: some View {
         let armW = size * 0.055
         let armH = size * 0.20
         let shoulderY = size * 0.60
         let bodyW = size * 0.24
-        let armOffsetX = bodyW * 0.55
+        let armOffsetX = bodyW * 0.42
+
+        let leftShoulderX  = size / 2 - armOffsetX
+        let rightShoulderX = size / 2 + armOffsetX
 
         return ZStack {
             arm(side: -1, armW: armW, armH: armH,
-                shoulderX: size / 2 - armOffsetX, shoulderY: shoulderY)
+                shoulderX: leftShoulderX,  shoulderY: shoulderY)
             arm(side: 1,  armW: armW, armH: armH,
-                shoulderX: size / 2 + armOffsetX, shoulderY: shoulderY)
+                shoulderX: rightShoulderX, shoulderY: shoulderY)
         }
     }
 
     private func arm(side: CGFloat, armW: CGFloat, armH: CGFloat,
                      shoulderX: CGFloat, shoulderY: CGFloat) -> some View {
+        // Угол разведения: 32° в стороны
+        let angleDeg: Double = Double(side) * 32.0
+        let angleRad: CGFloat = CGFloat(angleDeg) * .pi / 180.0
         let handSize = size * 0.085
         let fingerSize = handSize * 0.4
-        let handCY = shoulderY + armH + handSize * 0.1
+
+        // Позиция кисти через тригонометрию (плечо → рука вниз под углом)
+        let armLen = armH + handSize * 0.25
+        let handX = shoulderX + sin(angleRad) * armLen
+        let handY = shoulderY + cos(angleRad) * armLen
+
+        // Середина палочки руки
+        let midLen = armH * 0.5
+        let midX = shoulderX + sin(angleRad) * midLen
+        let midY = shoulderY + cos(angleRad) * midLen
 
         return ZStack {
-            // Палочка
-            RoundedRectangle(cornerRadius: armW * 0.5)
+            // Палочка руки — повёрнута под углом
+            Capsule()
                 .fill(skin)
                 .overlay(
-                    RoundedRectangle(cornerRadius: armW * 0.5)
-                        .stroke(Color.black.opacity(0.55), lineWidth: 1.5)
+                    Capsule().stroke(Color.black.opacity(0.55), lineWidth: 1.5)
                 )
                 .frame(width: armW, height: armH)
-                .position(x: shoulderX, y: shoulderY + armH / 2)
+                .rotationEffect(.degrees(angleDeg))
+                .position(x: midX, y: midY)
 
             // Кисть
             Circle()
@@ -243,9 +258,9 @@ struct AvatarBody: View {
                     Circle().stroke(Color.black.opacity(0.55), lineWidth: 1.5)
                 )
                 .frame(width: handSize, height: handSize)
-                .position(x: shoulderX, y: handCY)
+                .position(x: handX, y: handY)
 
-            // Пальчик
+            // Пальчик — с внутренней стороны кисти
             Circle()
                 .fill(skin)
                 .overlay(
@@ -253,8 +268,8 @@ struct AvatarBody: View {
                 )
                 .frame(width: fingerSize, height: fingerSize)
                 .position(
-                    x: shoulderX - side * handSize * 0.55,
-                    y: handCY - handSize * 0.15
+                    x: handX - side * handSize * 0.55,
+                    y: handY - handSize * 0.15
                 )
         }
     }
