@@ -15,7 +15,8 @@ extension Color {
     }
 }
 
-// MARK: - Локации (как "здания" на карте)
+// MARK: - Локации (здания на карте)
+
 enum LocationID: String, CaseIterable, Identifiable, Codable {
     case home = "Дом"
     case cafe = "Кафе"
@@ -24,7 +25,6 @@ enum LocationID: String, CaseIterable, Identifiable, Codable {
     case shop = "Магазин"
     case hospital = "Больница"
     case school = "Школа"
-    case space = "Космос"
 
     var id: String { rawValue }
 
@@ -37,11 +37,9 @@ enum LocationID: String, CaseIterable, Identifiable, Codable {
         case .shop: return "cart.fill"
         case .hospital: return "cross.case.fill"
         case .school: return "book.fill"
-        case .space: return "sparkles"
         }
     }
 
-    // Цвет крыши здания на карте
     var roofColor: String {
         switch self {
         case .home: return "#D2683C"
@@ -51,11 +49,9 @@ enum LocationID: String, CaseIterable, Identifiable, Codable {
         case .shop: return "#8B5CF6"
         case .hospital: return "#EF4444"
         case .school: return "#3B82F6"
-        case .space: return "#4A48C0"
         }
     }
 
-    // Цвет стен
     var wallColor: String {
         switch self {
         case .home: return "#FCD9A8"
@@ -65,29 +61,26 @@ enum LocationID: String, CaseIterable, Identifiable, Codable {
         case .shop: return "#C4B5FD"
         case .hospital: return "#F5F5F5"
         case .school: return "#BFDBFE"
-        case .space: return "#7C7AE8"
         }
     }
 
-    // Цвет для карточки
     var color: String { roofColor }
 
-    // Позиция здания на карте (x: 0-1, y: 0-1 от размера экрана)
     var mapPosition: CGPoint {
         switch self {
-        case .home:     return CGPoint(x: 0.20, y: 0.30)
-        case .cafe:     return CGPoint(x: 0.60, y: 0.25)
-        case .park:     return CGPoint(x: 0.35, y: 0.55)
-        case .beach:    return CGPoint(x: 0.78, y: 0.50)
-        case .shop:     return CGPoint(x: 0.15, y: 0.75)
-        case .hospital: return CGPoint(x: 0.50, y: 0.82)
-        case .school:   return CGPoint(x: 0.82, y: 0.78)
-        case .space:    return CGPoint(x: 0.05, y: 0.10)
+        case .home:     return CGPoint(x: 0.22, y: 0.28)
+        case .cafe:     return CGPoint(x: 0.62, y: 0.24)
+        case .park:     return CGPoint(x: 0.36, y: 0.55)
+        case .beach:    return CGPoint(x: 0.80, y: 0.50)
+        case .shop:     return CGPoint(x: 0.16, y: 0.74)
+        case .hospital: return CGPoint(x: 0.52, y: 0.80)
+        case .school:   return CGPoint(x: 0.84, y: 0.76)
         }
     }
 }
 
 // MARK: - Персонаж
+
 struct Player: Identifiable, Codable, Hashable {
     var id: UUID
     var name: String
@@ -143,6 +136,7 @@ struct Player: Identifiable, Codable, Hashable {
 }
 
 // MARK: - Предмет на сцене
+
 struct PlacedItem: Identifiable, Codable, Hashable {
     var id: UUID
     var catalogID: String
@@ -154,10 +148,11 @@ struct PlacedItem: Identifiable, Codable, Hashable {
 }
 
 // MARK: - Персонаж на сцене локации
+
 struct PlacedPlayer: Identifiable, Codable, Hashable {
     var id: UUID
     var playerID: UUID
-    var locationRaw: String    // где стоит персонаж
+    var locationRaw: String
     var x: Double
     var y: Double
 
