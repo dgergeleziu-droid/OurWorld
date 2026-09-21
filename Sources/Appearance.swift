@@ -1,47 +1,120 @@
 import SwiftUI
 
-// MARK: - Расширение палитры: новые цвета и стили
 extension Palette {
 
+    // MARK: - Кожа (8 оттенков)
+
     static let skinTones: [Color] = [
-        Color(hex: "#FFF1E0"), Color(hex: "#FBD5B0"), Color(hex: "#F3C39A"),
-        Color(hex: "#E8B283"), Color(hex: "#C98A5B"), Color(hex: "#A86B3D"),
-        Color(hex: "#7B4A2A"), Color(hex: "#5A3520")
+        Color(hex: "#FDE7D6"),
+        Color(hex: "#F9D6B5"),
+        Color(hex: "#EFC09A"),
+        Color(hex: "#DEA47C"),
+        Color(hex: "#C88A66"),
+        Color(hex: "#A16B47"),
+        Color(hex: "#7A4A32"),
+        Color(hex: "#4F2E1F")
     ]
-    static let skinNames = ["Фарфор","Светлая","Персик","Тёплая","Загар","Смуглая","Тёмная","Глубокая"]
+
+    // MARK: - Волосы (12 цветов)
 
     static let hairColors: [Color] = [
-        Color(hex: "#1E1410"), Color(hex: "#3B2515"), Color(hex: "#6B3F24"),
-        Color(hex: "#A56B3F"), Color(hex: "#E0BE7D"), Color(hex: "#F1D77E"),
-        Color(hex: "#B44A2C"), Color(hex: "#E0447A"), Color(hex: "#7B4BC8"),
-        Color(hex: "#4A90E2"), Color(hex: "#3EB49B"), Color(hex: "#E8B23D")
+        Color(hex: "#1F1B16"),
+        Color(hex: "#3B2A1A"),
+        Color(hex: "#5B3A1E"),
+        Color(hex: "#7A5230"),
+        Color(hex: "#A06A3B"),
+        Color(hex: "#C99B62"),
+        Color(hex: "#E4C28A"),
+        Color(hex: "#F0E1B9"),
+        Color(hex: "#C44A3B"),
+        Color(hex: "#8B3FE0"),
+        Color(hex: "#3B82F6"),
+        Color(hex: "#EC4899")
     ]
-    static let hairNames = ["Чёрный","Каштан","Русый","Светло-русый","Блонд","Золотой","Рыжий","Розовый","Фиолет","Синий","Зелёный","Оранж"]
+
+    // MARK: - Глаза (6 цветов)
 
     static let eyeColors: [Color] = [
-        Color(hex: "#241A12"), Color(hex: "#0F4C81"), Color(hex: "#3E7B54"),
-        Color(hex: "#6B4A2D"), Color(hex: "#8B6BC6"), Color(hex: "#C68A2D")
+        Color(hex: "#1F1B16"),
+        Color(hex: "#5B3A1E"),
+        Color(hex: "#8B5CF6"),
+        Color(hex: "#3B82F6"),
+        Color(hex: "#22C55E"),
+        Color(hex: "#92400E")
     ]
-    static let eyeNames = ["Карие","Синие","Зелёные","Орех","Фиолет","Янтарь"]
+
+    // MARK: - Одежда (12 цветов)
 
     static let outfitColors: [Color] = [
-        Color(hex: "#FF6B6B"), Color(hex: "#4ECDC4"), Color(hex: "#FFD93D"),
-        Color(hex: "#A8E6CF"), Color(hex: "#F093B7"), Color(hex: "#B39DDB"),
-        Color(hex: "#FFB4A2"), Color(hex: "#81D4FA"), Color(hex: "#FFF4A3"),
-        Color(hex: "#A5D6A7"), Color(hex: "#FFCC80"), Color(hex: "#9575CD")
+        Color(hex: "#1F2937"),
+        Color(hex: "#EF4444"),
+        Color(hex: "#F59E0B"),
+        Color(hex: "#FBBF24"),
+        Color(hex: "#22C55E"),
+        Color(hex: "#14B8A6"),
+        Color(hex: "#3B82F6"),
+        Color(hex: "#8B5CF6"),
+        Color(hex: "#EC4899"),
+        Color(hex: "#F472B6"),
+        Color(hex: "#FFFFFF"),
+        Color(hex: "#9CA3AF")
     ]
-    static let outfitNames = ["Коралл","Бирюза","Жёлтый","Мята","Розовый","Лаванда","Персик","Голубой","Лимон","Травяной","Песочный","Сиреневый"]
 
-    static let hairStyleNames = ["Короткие","Длинные","Хвостики","Пучок","Кудри","Косички","Ирокез","Прямые","Волны","Лысый"]
-    static let eyeStyleNames = ["Обычные","Большие","Малые","Крупные","Полу","Тильт"]
-    static let mouthStyleNames = ["Улыбка","Открытая","Бантик","Прямая","Кружок","Уголки"]
-    static let outfitStyleNames = ["Футболка","Платье","Свитер","Топ","Рубашка","Куртка","Сарафан","Худи","Туника","Костюм","Пуловер","Кроп"]
-    static let accessoryNames = ["Без","Очки","Кепка","Бант","Шляпа","Ободок","Серёжки","Маска"]
-}
+    // MARK: - Названия аксессуаров (для UI)
 
-// MARK: - Безопасный доступ к массиву
-extension Array {
-    subscript(safe index: Int) -> Element? {
-        indices.contains(index) ? self[index] : nil
-    }
+    static let accessoryNames: [String] = [
+        "Нет",
+        "Очки",
+        "Кепка",
+        "Бант",
+        "Шляпа",
+        "Ободок",
+        "Серёжки",
+        "Маска"
+    ]
+
+    // MARK: - Названия причёсок (для UI)
+
+    static let hairNames: [String] = [
+        "Короткие",
+        "Длинные",
+        "Хвостик",
+        "Два хвоста",
+        "Пучок",
+        "Кудри",
+        "Косички",
+        "Ирокез",
+        "Прямые",
+        "Волны",
+        "Каре",
+        "Лысый"
+    ]
+
+    // MARK: - Названия одежды
+
+    static let outfitNames: [String] = [
+        "Футболка",
+        "Рубашка",
+        "Платье",
+        "Худи",
+        "Свитер",
+        "Комбинезон",
+        "Сарафан",
+        "Костюм",
+        "Куртка",
+        "Жилет",
+        "Фартук",
+        "Мантия"
+    ]
+
+    // MARK: - Названия рта
+
+    static let mouthNames: [String] = [
+        "Улыбка",
+        "Нейтральный",
+        "Грустный",
+        "Открытый",
+        "Смех",
+        "Удивление"
+    ]
 }
