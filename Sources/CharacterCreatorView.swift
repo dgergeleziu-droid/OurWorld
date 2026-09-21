@@ -5,10 +5,31 @@ struct CharacterCreatorView: View {
     @EnvironmentObject var characterStore: CharacterStore
     @Environment(\.dismiss) private var dismiss
 
-    @State private var draft: Player = Player(name: "Друг")
-    @State private var editingName: String = ""
+    @State private var draft: Player
+    @State private var editingName: String
 
-    var isEditingExisting: Bool = false
+    /// Колбэк при сохранении существующего персонажа.
+    /// Если nil — значит создаём нового и сами добавляем в стор.
+    var onSave: ((Player) -> Void)? = nil
+
+    private var isEditingExisting: Bool { onSave != nil }
+
+    // MARK: - Init
+
+    init() {
+        let start = Player(name: "Друг")
+        _draft = State(initialValue: start)
+        _editingName = State(initialValue: start.name)
+        self.onSave = nil
+    }
+
+    init(existing: Player, onSave: @escaping (Player) -> Void) {
+        _draft = State(initialValue: existing)
+        _editingName = State(initialValue: existing.name)
+        self.onSave = onSave
+    }
+
+    // MARK: - Body
 
     var body: some View {
         NavigationStack {
@@ -65,9 +86,6 @@ struct CharacterCreatorView: View {
                 }
             }
         }
-        .onAppear {
-            editingName = draft.name
-        }
     }
 
     // MARK: - Превью
@@ -109,7 +127,7 @@ struct CharacterCreatorView: View {
     private var ageSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             sectionTitle("Возраст")
-            HStack(spacing: 10) {
+            HStack(spacing: 8) {
                 ForEach(AgeGroup.allCases) { age in
                     Button {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
@@ -118,12 +136,12 @@ struct CharacterCreatorView: View {
                     } label: {
                         VStack(spacing: 4) {
                             Image(systemName: age.icon)
-                                .font(.system(size: 20, weight: .semibold))
+                                .font(.system(size: 18, weight: .semibold))
                                 .foregroundColor(draft.ageGroup == age
                                                  ? .white
                                                  : Color(hex: "#6B7280"))
                             Text(age.rawValue)
-                                .font(.system(size: 10, weight: .semibold, design: .rounded))
+                                .font(.system(size: 9, weight: .semibold, design: .rounded))
                                 .foregroundColor(draft.ageGroup == age
                                                  ? .white
                                                  : Color(hex: "#6B7280"))
@@ -131,7 +149,7 @@ struct CharacterCreatorView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
                         .background(
-                            RoundedRectangle(cornerRadius: 14)
+                            RoundedRectangle(cornerRadius: 12)
                                 .fill(draft.ageGroup == age
                                       ? Color(hex: "#3B82F6")
                                       : Color.white)
@@ -384,7 +402,7 @@ struct CharacterCreatorView: View {
         }
     }
 
-    // MARK: - Слои (layering)
+    // MARK: - Слои
 
     private var layerSection: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -417,7 +435,6 @@ struct CharacterCreatorView: View {
 
                         Spacer()
 
-                        // Кнопка вверх (ближе к началу = сзади)
                         Button {
                             moveUp(index)
                         } label: {
@@ -432,7 +449,6 @@ struct CharacterCreatorView: View {
                         .buttonStyle(.plain)
                         .disabled(index == 0)
 
-                        // Кнопка вниз (в конец = спереди)
                         Button {
                             moveDown(index)
                         } label: {
@@ -521,7 +537,13 @@ struct CharacterCreatorView: View {
     // MARK: - Сохранение
 
     private func saveCharacter() {
-        characterStore.add(draft)
+        if let onSave {
+            // Режим редактирования: отдаём обновлённого наверх
+            onSave(draft)
+        } else {
+            // Режим создания: добавляем в стор сами
+            characterStore.add(draft)
+        }
         dismiss()
     }
 }
