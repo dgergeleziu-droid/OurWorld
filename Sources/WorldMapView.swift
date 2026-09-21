@@ -11,9 +11,17 @@ struct WorldMapView: View {
     @State private var cloudOffset1: CGFloat = -200
     @State private var cloudOffset2: CGFloat = 400
 
+    // Сортировка по глубине: верхние (дальние) рисуются раньше, нижние (ближние) — поверх
+    private var sortedLocations: [LocationID] {
+        LocationID.allCases.sorted { $0.mapPosition.y < $1.mapPosition.y }
+    }
+
     var body: some View {
         NavigationStack {
             GeometryReader { geo in
+                let W = geo.size.width
+                let H = geo.size.height
+
                 ZStack {
                     // Небо
                     LinearGradient(
@@ -28,52 +36,38 @@ struct WorldMapView: View {
                     .ignoresSafeArea()
 
                     // Солнце
-                    Circle()
-                        .fill(
-                            RadialGradient(
-                                colors: [Color(hex: "#FFE066"), Color(hex: "#FFB84D")],
-                                center: .center,
-                                startRadius: 5,
-                                endRadius: 70
-                            )
-                        )
-                        .frame(width: 110, height: 110)
-                        .shadow(color: Color(hex: "#FFD700").opacity(0.6), radius: 30)
-                        .scaleEffect(sunPulse ? 1.08 : 1.0)
-                        .position(x: geo.size.width * 0.85, y: geo.size.height * 0.15)
-                        .onAppear {
-                            withAnimation(
-                                .easeInOut(duration: 2.0).repeatForever(autoreverses: true)
-                            ) {
-                                sunPulse = true
-                            }
-                        }
+                    sunView(W: W, H: H)
 
                     // Облака
-                    cloudShape
-                        .position(x: geo.size.width * 0.5 + cloudOffset1,
-                                  y: geo.size.height * 0.12)
-                    cloudShape
-                        .opacity(0.85)
-                        .position(x: geo.size.width * 0.3 + cloudOffset2,
-                                  y: geo.size.height * 0.22)
+                    cloudsLayer(W: W, H: H)
 
-                    // Трава
-                    VStack(spacing: 0) {
-                        Spacer()
-                        Rectangle()
-                            .fill(
-                                LinearGradient(
-                                    colors: [Color(hex: "#8FD16B"), Color(hex: "#6BB84C")],
-                                    startPoint: .top, endPoint: .bottom
-                                )
+                    // Земля — изометрическая трапеция
+                    IsoGroundShape()
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color(hex: "#A8DE7A"),
+                                    Color(hex: "#8FD16B"),
+                                    Color(hex: "#6BB84C")
+                                ],
+                                startPoint: .top,
+                                endPoint: .bottom
                             )
-                            .frame(height: geo.size.height * 0.45)
-                    }
-                    .ignoresSafeArea()
+                        )
+                        .frame(width: W, height: H)
+                        .ignoresSafeArea()
 
-                    // Дорожка
-                    pathShape(in: geo.size)
+                    // Горизонтальные линии-плитки, уходящие в перспективу
+                    groundTileLines(W: W, H: H)
+
+                    // Дорожка в перспективе
+                    IsoRoadShape()
+                        .fill(Color(hex: "#E8C99B"))
+                        .frame(width: W, height: H)
+                        .opacity(0.9)
+
+                    // Декор — 3D деревья и кусты
+                    decorLayer(W: W, H: H)
 
                     // Заголовок
                     VStack {
@@ -84,16 +78,17 @@ struct WorldMapView: View {
                             .padding(.top, 16)
                         Spacer()
                     }
+                    .allowsHitTesting(false)
 
-                    // Здания
-                    ForEach(Array(LocationID.allCases.enumerated()), id: \.element.id) { index, location in
+                    // Здания (в порядке глубины)
+                    ForEach(Array(sortedLocations.enumerated()), id: \.element.id) { index, location in
                         NavigationLink(value: location) {
-                            BuildingView(location: location)
+                            IsoBuildingView(location: location)
                         }
                         .buttonStyle(BounceButtonStyle())
                         .position(
-                            x: geo.size.width * location.mapPosition.x,
-                            y: geo.size.height * location.mapPosition.y
+                            x: W * location.mapPosition.x,
+                            y: H * location.mapPosition.y
                         )
                         .opacity(appeared ? 1 : 0)
                         .scaleEffect(appeared ? 1.0 : 0.6)
@@ -105,25 +100,7 @@ struct WorldMapView: View {
                     }
 
                     // Кнопка меню
-                    VStack {
-                        HStack {
-                            Spacer()
-                            Button {
-                                showMenu = true
-                            } label: {
-                                Image(systemName: "gearshape.fill")
-                                    .font(.system(size: 20, weight: .bold))
-                                    .foregroundColor(Color(hex: "#111827"))
-                                    .frame(width: 48, height: 48)
-                                    .background(.white.opacity(0.95))
-                                    .clipShape(Circle())
-                                    .shadow(color: .black.opacity(0.12), radius: 8, y: 3)
-                            }
-                            .padding(.trailing, 20)
-                            .padding(.top, 60)
-                        }
-                        Spacer()
-                    }
+                    menuButton
                 }
             }
             .ignoresSafeArea(edges: .bottom)
@@ -147,318 +124,373 @@ struct WorldMapView: View {
         }
     }
 
-    // MARK: - Облако
+    // MARK: - Солнце
+
+    private func sunView(W: CGFloat, H: CGFloat) -> some View {
+        Circle()
+            .fill(
+                RadialGradient(
+                    colors: [Color(hex: "#FFE066"), Color(hex: "#FFB84D")],
+                    center: .center,
+                    startRadius: 5,
+                    endRadius: 70
+                )
+            )
+            .frame(width: 110, height: 110)
+            .shadow(color: Color(hex: "#FFD700").opacity(0.6), radius: 30)
+            .scaleEffect(sunPulse ? 1.08 : 1.0)
+            .position(x: W * 0.85, y: H * 0.15)
+            .onAppear {
+                withAnimation(
+                    .easeInOut(duration: 2.0).repeatForever(autoreverses: true)
+                ) {
+                    sunPulse = true
+                }
+            }
+    }
+
+    // MARK: - Облака
+
+    private func cloudsLayer(W: CGFloat, H: CGFloat) -> some View {
+        ZStack {
+            cloudShape
+                .position(x: W * 0.5 + cloudOffset1, y: H * 0.12)
+            cloudShape
+                .opacity(0.85)
+                .position(x: W * 0.3 + cloudOffset2, y: H * 0.22)
+        }
+    }
 
     private var cloudShape: some View {
         ZStack {
-            Ellipse()
-                .fill(Color.white)
-                .frame(width: 100, height: 50)
-            Ellipse()
-                .fill(Color.white)
-                .frame(width: 70, height: 60)
-                .offset(x: -35, y: -8)
-            Ellipse()
-                .fill(Color.white)
-                .frame(width: 60, height: 50)
-                .offset(x: 35, y: -5)
+            Ellipse().fill(Color.white).frame(width: 100, height: 50)
+            Ellipse().fill(Color.white).frame(width: 70, height: 60).offset(x: -35, y: -8)
+            Ellipse().fill(Color.white).frame(width: 60, height: 50).offset(x: 35, y: -5)
         }
         .shadow(color: .black.opacity(0.06), radius: 6, y: 3)
     }
 
-    // MARK: - Дорожка
+    // MARK: - Линии-плитки на земле
 
-    private func pathShape(in size: CGSize) -> some View {
-        Path { path in
-            path.move(to: CGPoint(x: 0, y: size.height * 0.62))
-            path.addCurve(
-                to: CGPoint(x: size.width, y: size.height * 0.58),
-                control1: CGPoint(x: size.width * 0.35, y: size.height * 0.52),
-                control2: CGPoint(x: size.width * 0.65, y: size.height * 0.68)
-            )
+    private func groundTileLines(W: CGFloat, H: CGFloat) -> some View {
+        ZStack {
+            ForEach(0..<6, id: \.self) { i in
+                let t = CGFloat(i) / 5.0
+                let y = H * (0.44 + t * 0.56)
+                let widthFactor = 0.70 + t * 0.30
+                Rectangle()
+                    .fill(Color.black.opacity(0.06))
+                    .frame(width: W * widthFactor, height: 1)
+                    .position(x: W / 2, y: y)
+            }
         }
-        .stroke(
-            Color(hex: "#E8C99B"),
-            style: StrokeStyle(lineWidth: 28, lineCap: .round)
-        )
-        .shadow(color: .black.opacity(0.08), radius: 3, y: 2)
+        .allowsHitTesting(false)
+    }
+
+    // MARK: - Декор
+
+    private func decorLayer(W: CGFloat, H: CGFloat) -> some View {
+        ZStack {
+            IsoTree(size: 44).position(x: W * 0.10, y: H * 0.62)
+            IsoTree(size: 36).position(x: W * 0.92, y: H * 0.58)
+            IsoBush(size: 28).position(x: W * 0.22, y: H * 0.86)
+            IsoBush(size: 32).position(x: W * 0.78, y: H * 0.82)
+            IsoTree(size: 40).position(x: W * 0.05, y: H * 0.90)
+            IsoTree(size: 40).position(x: W * 0.95, y: H * 0.88)
+        }
+        .allowsHitTesting(false)
+    }
+
+    // MARK: - Кнопка меню
+
+    private var menuButton: some View {
+        VStack {
+            HStack {
+                Spacer()
+                Button {
+                    showMenu = true
+                } label: {
+                    Image(systemName: "gearshape.fill")
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundColor(Color(hex: "#111827"))
+                        .frame(width: 48, height: 48)
+                        .background(.white.opacity(0.95))
+                        .clipShape(Circle())
+                        .shadow(color: .black.opacity(0.12), radius: 8, y: 3)
+                }
+                .padding(.trailing, 20)
+                .padding(.top, 60)
+            }
+            Spacer()
+        }
     }
 
     // MARK: - Анимация облаков
 
     private func animateClouds() {
-        withAnimation(
-            .linear(duration: 25).repeatForever(autoreverses: false)
-        ) {
+        withAnimation(.linear(duration: 25).repeatForever(autoreverses: false)) {
             cloudOffset1 = 500
         }
-        withAnimation(
-            .linear(duration: 35).repeatForever(autoreverses: false)
-        ) {
+        withAnimation(.linear(duration: 35).repeatForever(autoreverses: false)) {
             cloudOffset2 = 500
         }
     }
 }
 
-// MARK: - Детализированное здание
+// MARK: - Формы изометрии (мир)
 
-struct BuildingView: View {
+struct IsoGroundShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        let w = rect.width
+        let h = rect.height
+        p.move(to: CGPoint(x: w * 0.20, y: h * 0.44))
+        p.addLine(to: CGPoint(x: w * 0.80, y: h * 0.44))
+        p.addLine(to: CGPoint(x: w, y: h))
+        p.addLine(to: CGPoint(x: 0, y: h))
+        p.closeSubpath()
+        return p
+    }
+}
 
+struct IsoRoadShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        let w = rect.width
+        let h = rect.height
+        p.move(to: CGPoint(x: w * 0.44, y: h * 0.46))
+        p.addLine(to: CGPoint(x: w * 0.56, y: h * 0.46))
+        p.addLine(to: CGPoint(x: w * 0.78, y: h))
+        p.addLine(to: CGPoint(x: w * 0.22, y: h))
+        p.closeSubpath()
+        return p
+    }
+}
+
+// MARK: - 3D здание
+
+struct IsoBuildingView: View {
     let location: LocationID
 
-    private let houseW: CGFloat = 110
-    private let wallH: CGFloat = 80
-    private let roofH: CGFloat = 55
-    private let foundationH: CGFloat = 8
+    // Размеры
+    private let wallW: CGFloat = 90
+    private let wallH: CGFloat = 70
+    private let roofH: CGFloat = 50
+    private let sideDx: CGFloat = 22   // глубина вправо
+    private let sideDy: CGFloat = 13   // глубина вверх
+
+    // Общая рамка
+    private let frameW: CGFloat = 140
+    private let frameH: CGFloat = 160
+    private let originX: CGFloat = 60
+    private let originY: CGFloat = 145
+
+    private var wallColor: Color { Color(hex: location.wallColor) }
+    private var wallColorDark: Color { Color(hex: location.wallColor).opacity(0.65) }
+    private var roofColor: Color { Color(hex: location.roofColor) }
+    private var roofColorDark: Color { Color(hex: location.roofColor).opacity(0.62) }
+
+    private func fx(_ lx: CGFloat) -> CGFloat { lx + originX }
+    private func fy(_ ly: CGFloat) -> CGFloat { ly + originY }
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            // Тень на земле
-            Ellipse()
-                .fill(Color.black.opacity(0.18))
-                .frame(width: houseW * 0.95, height: 14)
-                .blur(radius: 2)
-                .offset(y: 4)
-
-            VStack(spacing: 0) {
-                roof
-                walls
-                foundation
-            }
-            .offset(y: -8)
+        ZStack {
+            groundShadow
+            rightSideWall
+            frontWall
+            if location == .home { chimney }
+            frontRoof
+            rightRoof
+            doorElement
+            leftWindowElement
+            rightWindowElement
+            locationSignElement
+            flowerPotElement
         }
-        .frame(width: houseW, height: wallH + roofH + foundationH + 20)
+        .frame(width: frameW, height: frameH)
     }
 
-    // MARK: Крыша
-
-    private var roof: some View {
-        ZStack(alignment: .bottom) {
-            if location == .home {
-                chimney
-                    .offset(x: houseW * 0.25, y: -roofH + 18)
-            }
-
-            RoofShape()
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color(hex: location.roofColor),
-                            Color(hex: location.roofColor).opacity(0.85)
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-                .frame(width: houseW, height: roofH)
-                .overlay(
-                    VStack(spacing: 6) {
-                        ForEach(0..<4, id: \.self) { _ in
-                            Rectangle()
-                                .fill(Color.white.opacity(0.15))
-                                .frame(height: 1)
-                        }
-                    }
-                    .frame(width: houseW * 0.7)
-                    .offset(y: -6)
-                )
-                .overlay(
-                    RoofShape()
-                        .stroke(Color.black.opacity(0.3), lineWidth: 2)
-                )
-                .shadow(color: .black.opacity(0.15), radius: 3, y: 2)
-        }
+    // Тень на земле
+    private var groundShadow: some View {
+        Ellipse()
+            .fill(Color.black.opacity(0.22))
+            .frame(width: wallW * 1.15, height: 14)
+            .blur(radius: 3)
+            .position(x: fx(6), y: fy(4))
     }
 
-    // MARK: Стены
-
-    private var walls: some View {
-        ZStack(alignment: .bottom) {
-            Rectangle()
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color(hex: location.wallColor),
-                            Color(hex: location.wallColor).opacity(0.88)
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
+    // Правая боковая стена
+    private var rightSideWall: some View {
+        RightWallShape(depthX: sideDx, depthY: sideDy, wallH: wallH)
+            .fill(
+                LinearGradient(
+                    colors: [wallColorDark, wallColorDark.opacity(0.85)],
+                    startPoint: .top, endPoint: .bottom
                 )
-                .frame(width: houseW * 0.9, height: wallH)
-                .overlay(
-                    Rectangle()
-                        .stroke(Color.black.opacity(0.25), lineWidth: 1.5)
-                )
-                .overlay(
-                    HStack(spacing: 8) {
-                        ForEach(0..<7, id: \.self) { _ in
-                            Rectangle()
-                                .fill(Color.black.opacity(0.05))
-                                .frame(width: 1)
-                        }
-                    }
-                    .frame(height: wallH * 0.85)
-                )
-
-            HStack(spacing: 10) {
-                window
-                window
-            }
-            .offset(y: -wallH * 0.55)
-
-            VStack(spacing: 2) {
-                steps
-                door
-            }
-            .offset(y: 2)
-
-            locationSign
-                .offset(y: -wallH + 14)
-
-            flowerPot
-                .offset(x: -houseW * 0.32, y: -4)
-        }
-    }
-
-    // MARK: Фундамент
-
-    private var foundation: some View {
-        Rectangle()
-            .fill(Color(hex: "#9CA3AF"))
-            .frame(width: houseW * 0.95, height: foundationH)
-            .overlay(
-                Rectangle()
-                    .stroke(Color.black.opacity(0.3), lineWidth: 1)
             )
             .overlay(
-                HStack(spacing: 4) {
-                    ForEach(0..<8, id: \.self) { _ in
-                        Circle()
-                            .fill(Color.white.opacity(0.15))
-                            .frame(width: 3, height: 3)
-                    }
-                }
+                RightWallShape(depthX: sideDx, depthY: sideDy, wallH: wallH)
+                    .stroke(Color.black.opacity(0.45), lineWidth: 1.5)
             )
+            .frame(width: sideDx, height: wallH + sideDy)
+            .position(x: fx(wallW / 2 + sideDx / 2),
+                      y: fy(-wallH / 2 - sideDy / 2))
     }
 
-    // MARK: Детали
-
-    private var window: some View {
+    // Передняя стена
+    private var frontWall: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 3)
-                .fill(Color.white)
-                .frame(width: 22, height: 24)
-
-            RoundedRectangle(cornerRadius: 2)
-                .fill(Color(hex: "#BFE6FF"))
-                .frame(width: 16, height: 18)
-                .overlay(
+                .fill(
                     LinearGradient(
-                        colors: [Color.white.opacity(0.6), Color.clear],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
+                        colors: [wallColor, wallColor.opacity(0.88)],
+                        startPoint: .top, endPoint: .bottom
                     )
-                    .frame(width: 16, height: 18)
-                    .clipShape(RoundedRectangle(cornerRadius: 2))
                 )
+                .frame(width: wallW, height: wallH)
 
-            Rectangle()
-                .fill(Color.white)
-                .frame(width: 2, height: 18)
-            Rectangle()
-                .fill(Color.white)
-                .frame(width: 16, height: 2)
+            HStack(spacing: 6) {
+                ForEach(0..<10, id: \.self) { _ in
+                    Rectangle().fill(Color.black.opacity(0.05)).frame(width: 1)
+                }
+            }
+            .frame(height: wallH * 0.9)
 
             RoundedRectangle(cornerRadius: 3)
-                .stroke(Color.black.opacity(0.35), lineWidth: 1)
-                .frame(width: 22, height: 24)
-
-            Rectangle()
-                .fill(Color.white)
-                .frame(width: 26, height: 3)
-                .offset(y: 14)
+                .stroke(Color.black.opacity(0.45), lineWidth: 1.8)
+                .frame(width: wallW, height: wallH)
         }
+        .frame(width: wallW, height: wallH)
+        .position(x: fx(0), y: fy(-wallH / 2))
     }
 
-    private var door: some View {
+    // Передняя крыша (треугольник)
+    private var frontRoof: some View {
+        FrontRoofShape()
+            .fill(
+                LinearGradient(
+                    colors: [roofColor, roofColor.opacity(0.85)],
+                    startPoint: .top, endPoint: .bottom
+                )
+            )
+            .overlay(
+                FrontRoofShape()
+                    .stroke(Color.black.opacity(0.4), lineWidth: 1.8)
+            )
+            .frame(width: wallW, height: roofH)
+            .position(x: fx(0), y: fy(-wallH - roofH / 2))
+    }
+
+    // Правый скат крыши
+    private var rightRoof: some View {
+        RightRoofShape(
+            ridgeDx: sideDx,
+            ridgeDy: sideDy,
+            roofH: roofH,
+            wallHalfW: wallW / 2
+        )
+        .fill(
+            LinearGradient(
+                colors: [roofColorDark, roofColorDark.opacity(0.8)],
+                startPoint: .topLeading, endPoint: .bottomTrailing
+            )
+        )
+        .overlay(
+            RightRoofShape(
+                ridgeDx: sideDx,
+                ridgeDy: sideDy,
+                roofH: roofH,
+                wallHalfW: wallW / 2
+            )
+            .stroke(Color.black.opacity(0.4), lineWidth: 1.8)
+        )
+        .frame(width: wallW / 2 + sideDx, height: roofH + sideDy)
+        .position(
+            x: fx((wallW / 2 + sideDx) / 2),
+            y: fy(-wallH - roofH + (roofH + sideDy) / 2 - sideDy)
+        )
+    }
+
+    // Дымоход
+    private var chimney: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 1.5)
+                .fill(Color(hex: "#8B5A2B"))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 1.5)
+                        .stroke(Color.black.opacity(0.5), lineWidth: 1.2)
+                )
+                .frame(width: 12, height: 26)
+
+            RoundedRectangle(cornerRadius: 1.5)
+                .fill(Color(hex: "#5C3B1E"))
+                .frame(width: 16, height: 4)
+                .offset(y: -14)
+        }
+        .position(x: fx(wallW * 0.28), y: fy(-wallH - roofH * 0.7))
+    }
+
+    // Дверь
+    private var doorElement: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 6)
-                .fill(Color(hex: location.roofColor).opacity(0.9))
-                .frame(width: 26, height: 36)
+                .fill(Color(hex: location.roofColor).opacity(0.95))
                 .overlay(
                     RoundedRectangle(cornerRadius: 6)
-                        .stroke(Color.black.opacity(0.35), lineWidth: 1.5)
+                        .stroke(Color.black.opacity(0.4), lineWidth: 1.5)
                 )
+                .frame(width: 26, height: 36)
 
             RoundedRectangle(cornerRadius: 2)
-                .fill(Color.white.opacity(0.25))
+                .fill(Color.white.opacity(0.3))
                 .frame(width: 18, height: 10)
-                .offset(y: -8)
+                .offset(y: -7)
 
             RoundedRectangle(cornerRadius: 2)
-                .fill(Color.white.opacity(0.25))
+                .fill(Color.white.opacity(0.3))
                 .frame(width: 18, height: 10)
                 .offset(y: 6)
 
             Circle()
                 .fill(Color(hex: "#FBBF24"))
                 .frame(width: 4, height: 4)
-                .overlay(
-                    Circle().stroke(Color.black.opacity(0.3), lineWidth: 0.5)
-                )
+                .overlay(Circle().stroke(Color.black.opacity(0.3), lineWidth: 0.5))
                 .offset(x: 8, y: 2)
         }
+        .position(x: fx(0), y: fy(-18))
     }
 
-    private var steps: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 2)
-                .fill(Color(hex: "#9CA3AF"))
-                .frame(width: 34, height: 4)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 2)
-                        .stroke(Color.black.opacity(0.3), lineWidth: 0.8)
-                )
-            RoundedRectangle(cornerRadius: 2)
-                .fill(Color(hex: "#B4BCC7"))
-                .frame(width: 38, height: 4)
-                .offset(y: 4)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 2)
-                        .stroke(Color.black.opacity(0.3), lineWidth: 0.8)
-                )
-        }
-        .offset(y: 36)
+    // Окна
+    private var leftWindowElement: some View {
+        windowShape.position(x: fx(-wallW * 0.28), y: fy(-wallH * 0.65))
     }
-
-    private var chimney: some View {
+    private var rightWindowElement: some View {
+        windowShape.position(x: fx(wallW * 0.28), y: fy(-wallH * 0.65))
+    }
+    private var windowShape: some View {
         ZStack {
-            Rectangle()
-                .fill(Color(hex: "#8B5A2B"))
-                .frame(width: 12, height: 28)
+            RoundedRectangle(cornerRadius: 3).fill(Color.white).frame(width: 22, height: 24)
+            RoundedRectangle(cornerRadius: 2)
+                .fill(Color(hex: "#BFE6FF"))
+                .frame(width: 16, height: 18)
                 .overlay(
-                    Rectangle()
-                        .stroke(Color.black.opacity(0.4), lineWidth: 1.2)
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.6), Color.clear],
+                        startPoint: .topLeading, endPoint: .bottomTrailing
+                    )
+                    .frame(width: 16, height: 18)
+                    .clipShape(RoundedRectangle(cornerRadius: 2))
                 )
-                .overlay(
-                    VStack(spacing: 3) {
-                        ForEach(0..<5, id: \.self) { _ in
-                            Rectangle()
-                                .fill(Color.white.opacity(0.15))
-                                .frame(height: 0.8)
-                        }
-                    }
-                )
-
-            Rectangle()
-                .fill(Color(hex: "#5C3B1E"))
-                .frame(width: 16, height: 4)
-                .offset(y: -16)
+            Rectangle().fill(Color.white).frame(width: 2, height: 18)
+            Rectangle().fill(Color.white).frame(width: 16, height: 2)
+            RoundedRectangle(cornerRadius: 3)
+                .stroke(Color.black.opacity(0.4), lineWidth: 1)
+                .frame(width: 22, height: 24)
         }
     }
 
-    private var locationSign: some View {
+    // Табличка с иконкой
+    private var locationSignElement: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 4)
                 .fill(Color.white)
@@ -473,41 +505,128 @@ struct BuildingView: View {
                 .font(.system(size: 11, weight: .bold))
                 .foregroundColor(Color(hex: location.roofColor))
         }
+        .position(x: fx(0), y: fy(-wallH + 12))
     }
 
-    private var flowerPot: some View {
+    // Цветочный горшок
+    private var flowerPotElement: some View {
         ZStack(alignment: .bottom) {
             RoundedRectangle(cornerRadius: 2)
                 .fill(Color(hex: "#C89B6E"))
                 .frame(width: 10, height: 8)
                 .overlay(
                     RoundedRectangle(cornerRadius: 2)
-                        .stroke(Color.black.opacity(0.3), lineWidth: 0.8)
+                        .stroke(Color.black.opacity(0.35), lineWidth: 0.8)
                 )
-
             ZStack {
-                Circle()
-                    .fill(Color(hex: "#EC4899"))
-                    .frame(width: 8, height: 8)
-                Circle()
-                    .fill(Color(hex: "#FBBF24"))
-                    .frame(width: 3, height: 3)
+                Circle().fill(Color(hex: "#EC4899")).frame(width: 8, height: 8)
+                Circle().fill(Color(hex: "#FBBF24")).frame(width: 3, height: 3)
             }
             .offset(y: -8)
+        }
+        .position(x: fx(-wallW * 0.35), y: fy(-4))
+    }
+}
+
+// MARK: - 3D деревья и кусты
+
+struct IsoTree: View {
+    let size: CGFloat
+
+    var body: some View {
+        ZStack {
+            Ellipse()
+                .fill(Color.black.opacity(0.2))
+                .frame(width: size * 0.7, height: size * 0.15)
+                .offset(y: size * 0.42)
+
+            Capsule()
+                .fill(Color(hex: "#8B5A2B"))
+                .overlay(Capsule().stroke(Color.black.opacity(0.4), lineWidth: 1.2))
+                .frame(width: size * 0.13, height: size * 0.45)
+                .offset(y: size * 0.18)
+
+            Circle()
+                .fill(Color(hex: "#4CAF50"))
+                .overlay(Circle().stroke(Color.black.opacity(0.35), lineWidth: 1.5))
+                .frame(width: size * 0.95, height: size * 0.95)
+
+            Circle()
+                .fill(Color(hex: "#66BB6A"))
+                .frame(width: size * 0.5, height: size * 0.5)
+                .offset(x: -size * 0.12, y: -size * 0.12)
         }
     }
 }
 
-// MARK: - Форма крыши
+struct IsoBush: View {
+    let size: CGFloat
 
-struct RoofShape: Shape {
+    var body: some View {
+        ZStack {
+            Ellipse()
+                .fill(Color.black.opacity(0.2))
+                .frame(width: size * 1.0, height: size * 0.15)
+                .offset(y: size * 0.4)
+
+            Ellipse()
+                .fill(Color(hex: "#4CAF50"))
+                .overlay(Ellipse().stroke(Color.black.opacity(0.35), lineWidth: 1.4))
+                .frame(width: size, height: size * 0.85)
+
+            Ellipse()
+                .fill(Color(hex: "#66BB6A"))
+                .frame(width: size * 0.45, height: size * 0.4)
+                .offset(x: -size * 0.15, y: -size * 0.12)
+        }
+    }
+}
+
+// MARK: - Shapes для 3D дома
+
+struct FrontRoofShape: Shape {
     func path(in rect: CGRect) -> Path {
-        var path = Path()
-        path.move(to: CGPoint(x: rect.minX, y: rect.maxY))
-        path.addLine(to: CGPoint(x: rect.midX, y: rect.minY))
-        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
-        path.closeSubpath()
-        return path
+        var p = Path()
+        p.move(to: CGPoint(x: 0, y: rect.height))
+        p.addLine(to: CGPoint(x: rect.width / 2, y: 0))
+        p.addLine(to: CGPoint(x: rect.width, y: rect.height))
+        p.closeSubpath()
+        return p
+    }
+}
+
+struct RightWallShape: Shape {
+    let depthX: CGFloat
+    let depthY: CGFloat
+    let wallH: CGFloat
+
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        // rect size = (depthX, wallH + depthY)
+        p.move(to: CGPoint(x: 0, y: depthY))
+        p.addLine(to: CGPoint(x: depthX, y: 0))
+        p.addLine(to: CGPoint(x: depthX, y: wallH))
+        p.addLine(to: CGPoint(x: 0, y: wallH + depthY))
+        p.closeSubpath()
+        return p
+    }
+}
+
+struct RightRoofShape: Shape {
+    let ridgeDx: CGFloat
+    let ridgeDy: CGFloat
+    let roofH: CGFloat
+    let wallHalfW: CGFloat
+
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        // rect size = (wallHalfW + ridgeDx, roofH + ridgeDy)
+        p.move(to: CGPoint(x: 0, y: ridgeDy))
+        p.addLine(to: CGPoint(x: wallHalfW, y: roofH + ridgeDy))
+        p.addLine(to: CGPoint(x: wallHalfW + ridgeDx, y: roofH))
+        p.addLine(to: CGPoint(x: ridgeDx, y: 0))
+        p.closeSubpath()
+        return p
     }
 }
 
