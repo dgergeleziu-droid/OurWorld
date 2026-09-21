@@ -15,7 +15,7 @@ struct WorldMapView: View {
         NavigationStack {
             GeometryReader { geo in
                 ZStack {
-                    // === Небо ===
+                    // Небо
                     LinearGradient(
                         colors: [
                             Color(hex: "#AEE2FF"),
@@ -27,7 +27,7 @@ struct WorldMapView: View {
                     )
                     .ignoresSafeArea()
 
-                    // === Солнце ===
+                    // Солнце
                     Circle()
                         .fill(
                             RadialGradient(
@@ -49,7 +49,7 @@ struct WorldMapView: View {
                             }
                         }
 
-                    // === Облака ===
+                    // Облака
                     cloudShape
                         .position(x: geo.size.width * 0.5 + cloudOffset1,
                                   y: geo.size.height * 0.12)
@@ -58,7 +58,7 @@ struct WorldMapView: View {
                         .position(x: geo.size.width * 0.3 + cloudOffset2,
                                   y: geo.size.height * 0.22)
 
-                    // === Трава ===
+                    // Трава
                     VStack(spacing: 0) {
                         Spacer()
                         Rectangle()
@@ -72,10 +72,10 @@ struct WorldMapView: View {
                     }
                     .ignoresSafeArea()
 
-                    // === Дорожки (декоративные) ===
+                    // Дорожка
                     pathShape(in: geo.size)
 
-                    // === Заголовок ===
+                    // Заголовок
                     VStack {
                         Text("OurWorld")
                             .font(.system(size: 32, weight: .heavy, design: .rounded))
@@ -85,7 +85,7 @@ struct WorldMapView: View {
                         Spacer()
                     }
 
-                    // === Здания ===
+                    // Здания
                     ForEach(Array(LocationID.allCases.enumerated()), id: \.element.id) { index, location in
                         NavigationLink(value: location) {
                             BuildingView(location: location)
@@ -104,7 +104,7 @@ struct WorldMapView: View {
                         )
                     }
 
-                    // === Кнопка меню (правый верхний угол) ===
+                    // Кнопка меню
                     VStack {
                         HStack {
                             Spacer()
@@ -166,7 +166,7 @@ struct WorldMapView: View {
         .shadow(color: .black.opacity(0.06), radius: 6, y: 3)
     }
 
-    // MARK: - Дорожки
+    // MARK: - Дорожка
 
     private func pathShape(in size: CGSize) -> some View {
         Path { path in
@@ -200,58 +200,301 @@ struct WorldMapView: View {
     }
 }
 
-// MARK: - Здание на карте
+// MARK: - Детализированное здание
 
 struct BuildingView: View {
 
     let location: LocationID
 
+    private let houseW: CGFloat = 110
+    private let wallH: CGFloat = 80
+    private let roofH: CGFloat = 55
+    private let foundationH: CGFloat = 8
+
     var body: some View {
-        VStack(spacing: 0) {
-            // Крыша
-            RoofShape()
-                .fill(Color(hex: location.roofColor))
-                .frame(width: 76, height: 38)
-                .shadow(color: .black.opacity(0.15), radius: 3, y: 2)
+        ZStack(alignment: .bottom) {
+            // Тень на земле
+            Ellipse()
+                .fill(Color.black.opacity(0.18))
+                .frame(width: houseW * 0.95, height: 14)
+                .blur(radius: 2)
+                .offset(y: 4)
 
-            // Стены
-            ZStack {
-                Rectangle()
-                    .fill(Color(hex: location.wallColor))
-                    .frame(width: 66, height: 58)
-                    .shadow(color: .black.opacity(0.12), radius: 3, y: 3)
-
-                // Окна
-                HStack(spacing: 6) {
-                    window
-                    window
-                }
-                .offset(y: -8)
-
-                // Дверь
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(Color(hex: location.roofColor).opacity(0.85))
-                    .frame(width: 18, height: 26)
-                    .offset(y: 16)
-
-                // Иконка локации на двери
-                Image(systemName: location.icon)
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(.white)
-                    .offset(y: 16)
+            VStack(spacing: 0) {
+                roof
+                walls
+                foundation
             }
+            .offset(y: -8)
         }
-        .scaleEffect(1.0)
+        .frame(width: houseW, height: wallH + roofH + foundationH + 20)
     }
 
-    private var window: some View {
-        RoundedRectangle(cornerRadius: 3)
-            .fill(Color(hex: "#BFE6FF"))
-            .frame(width: 16, height: 14)
+    // MARK: Крыша
+
+    private var roof: some View {
+        ZStack(alignment: .bottom) {
+            if location == .home {
+                chimney
+                    .offset(x: houseW * 0.25, y: -roofH + 18)
+            }
+
+            RoofShape()
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color(hex: location.roofColor),
+                            Color(hex: location.roofColor).opacity(0.85)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .frame(width: houseW, height: roofH)
+                .overlay(
+                    VStack(spacing: 6) {
+                        ForEach(0..<4, id: \.self) { _ in
+                            Rectangle()
+                                .fill(Color.white.opacity(0.15))
+                                .frame(height: 1)
+                        }
+                    }
+                    .frame(width: houseW * 0.7)
+                    .offset(y: -6)
+                )
+                .overlay(
+                    RoofShape()
+                        .stroke(Color.black.opacity(0.3), lineWidth: 2)
+                )
+                .shadow(color: .black.opacity(0.15), radius: 3, y: 2)
+        }
+    }
+
+    // MARK: Стены
+
+    private var walls: some View {
+        ZStack(alignment: .bottom) {
+            Rectangle()
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color(hex: location.wallColor),
+                            Color(hex: location.wallColor).opacity(0.88)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .frame(width: houseW * 0.9, height: wallH)
+                .overlay(
+                    Rectangle()
+                        .stroke(Color.black.opacity(0.25), lineWidth: 1.5)
+                )
+                .overlay(
+                    HStack(spacing: 8) {
+                        ForEach(0..<7, id: \.self) { _ in
+                            Rectangle()
+                                .fill(Color.black.opacity(0.05))
+                                .frame(width: 1)
+                        }
+                    }
+                    .frame(height: wallH * 0.85)
+                )
+
+            HStack(spacing: 10) {
+                window
+                window
+            }
+            .offset(y: -wallH * 0.55)
+
+            VStack(spacing: 2) {
+                steps
+                door
+            }
+            .offset(y: 2)
+
+            locationSign
+                .offset(y: -wallH + 14)
+
+            flowerPot
+                .offset(x: -houseW * 0.32, y: -4)
+        }
+    }
+
+    // MARK: Фундамент
+
+    private var foundation: some View {
+        Rectangle()
+            .fill(Color(hex: "#9CA3AF"))
+            .frame(width: houseW * 0.95, height: foundationH)
             .overlay(
-                RoundedRectangle(cornerRadius: 3)
-                    .stroke(Color.white, lineWidth: 2)
+                Rectangle()
+                    .stroke(Color.black.opacity(0.3), lineWidth: 1)
             )
+            .overlay(
+                HStack(spacing: 4) {
+                    ForEach(0..<8, id: \.self) { _ in
+                        Circle()
+                            .fill(Color.white.opacity(0.15))
+                            .frame(width: 3, height: 3)
+                    }
+                }
+            )
+    }
+
+    // MARK: Детали
+
+    private var window: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 3)
+                .fill(Color.white)
+                .frame(width: 22, height: 24)
+
+            RoundedRectangle(cornerRadius: 2)
+                .fill(Color(hex: "#BFE6FF"))
+                .frame(width: 16, height: 18)
+                .overlay(
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.6), Color.clear],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                    .frame(width: 16, height: 18)
+                    .clipShape(RoundedRectangle(cornerRadius: 2))
+                )
+
+            Rectangle()
+                .fill(Color.white)
+                .frame(width: 2, height: 18)
+            Rectangle()
+                .fill(Color.white)
+                .frame(width: 16, height: 2)
+
+            RoundedRectangle(cornerRadius: 3)
+                .stroke(Color.black.opacity(0.35), lineWidth: 1)
+                .frame(width: 22, height: 24)
+
+            Rectangle()
+                .fill(Color.white)
+                .frame(width: 26, height: 3)
+                .offset(y: 14)
+        }
+    }
+
+    private var door: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 6)
+                .fill(Color(hex: location.roofColor).opacity(0.9))
+                .frame(width: 26, height: 36)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(Color.black.opacity(0.35), lineWidth: 1.5)
+                )
+
+            RoundedRectangle(cornerRadius: 2)
+                .fill(Color.white.opacity(0.25))
+                .frame(width: 18, height: 10)
+                .offset(y: -8)
+
+            RoundedRectangle(cornerRadius: 2)
+                .fill(Color.white.opacity(0.25))
+                .frame(width: 18, height: 10)
+                .offset(y: 6)
+
+            Circle()
+                .fill(Color(hex: "#FBBF24"))
+                .frame(width: 4, height: 4)
+                .overlay(
+                    Circle().stroke(Color.black.opacity(0.3), lineWidth: 0.5)
+                )
+                .offset(x: 8, y: 2)
+        }
+    }
+
+    private var steps: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 2)
+                .fill(Color(hex: "#9CA3AF"))
+                .frame(width: 34, height: 4)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 2)
+                        .stroke(Color.black.opacity(0.3), lineWidth: 0.8)
+                )
+            RoundedRectangle(cornerRadius: 2)
+                .fill(Color(hex: "#B4BCC7"))
+                .frame(width: 38, height: 4)
+                .offset(y: 4)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 2)
+                        .stroke(Color.black.opacity(0.3), lineWidth: 0.8)
+                )
+        }
+        .offset(y: 36)
+    }
+
+    private var chimney: some View {
+        ZStack {
+            Rectangle()
+                .fill(Color(hex: "#8B5A2B"))
+                .frame(width: 12, height: 28)
+                .overlay(
+                    Rectangle()
+                        .stroke(Color.black.opacity(0.4), lineWidth: 1.2)
+                )
+                .overlay(
+                    VStack(spacing: 3) {
+                        ForEach(0..<5, id: \.self) { _ in
+                            Rectangle()
+                                .fill(Color.white.opacity(0.15))
+                                .frame(height: 0.8)
+                        }
+                    }
+                )
+
+            Rectangle()
+                .fill(Color(hex: "#5C3B1E"))
+                .frame(width: 16, height: 4)
+                .offset(y: -16)
+        }
+    }
+
+    private var locationSign: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 4)
+                .fill(Color.white)
+                .frame(width: 34, height: 20)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 4)
+                        .stroke(Color(hex: location.roofColor), lineWidth: 2)
+                )
+                .shadow(color: .black.opacity(0.15), radius: 2, y: 1)
+
+            Image(systemName: location.icon)
+                .font(.system(size: 11, weight: .bold))
+                .foregroundColor(Color(hex: location.roofColor))
+        }
+    }
+
+    private var flowerPot: some View {
+        ZStack(alignment: .bottom) {
+            RoundedRectangle(cornerRadius: 2)
+                .fill(Color(hex: "#C89B6E"))
+                .frame(width: 10, height: 8)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 2)
+                        .stroke(Color.black.opacity(0.3), lineWidth: 0.8)
+                )
+
+            ZStack {
+                Circle()
+                    .fill(Color(hex: "#EC4899"))
+                    .frame(width: 8, height: 8)
+                Circle()
+                    .fill(Color(hex: "#FBBF24"))
+                    .frame(width: 3, height: 3)
+            }
+            .offset(y: -8)
+        }
     }
 }
 
@@ -268,7 +511,7 @@ struct RoofShape: Shape {
     }
 }
 
-// MARK: - Стиль кнопки (пружинка при нажатии)
+// MARK: - Стиль кнопки
 
 struct BounceButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
