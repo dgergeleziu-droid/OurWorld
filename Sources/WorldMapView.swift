@@ -292,9 +292,11 @@ struct IsoBuildingView: View {
     private let originY: CGFloat = 145
 
     private var wallColor: Color { Color(hex: location.wallColor) }
-    private var wallColorDark: Color { Color(hex: location.wallColor).opacity(0.65) }
+    // НЕ прозрачный, а затемнённый — иначе сквозь стену видно фон
+    private var wallColorDark: Color { Color(hex: location.wallColor).brightness(-0.18) }
     private var roofColor: Color { Color(hex: location.roofColor) }
-    private var roofColorDark: Color { Color(hex: location.roofColor).opacity(0.62) }
+    // НЕ прозрачный, а затемнённый
+    private var roofColorDark: Color { Color(hex: location.roofColor).brightness(-0.22) }
 
     private func fx(_ lx: CGFloat) -> CGFloat { lx + originX }
     private func fy(_ ly: CGFloat) -> CGFloat { ly + originY }
@@ -330,7 +332,7 @@ struct IsoBuildingView: View {
         RightWallShape(depthX: sideDx, depthY: sideDy, wallH: wallH)
             .fill(
                 LinearGradient(
-                    colors: [wallColorDark, wallColorDark.opacity(0.85)],
+                    colors: [wallColorDark, wallColorDark],
                     startPoint: .top, endPoint: .bottom
                 )
             )
@@ -349,7 +351,7 @@ struct IsoBuildingView: View {
             RoundedRectangle(cornerRadius: 3)
                 .fill(
                     LinearGradient(
-                        colors: [wallColor, wallColor.opacity(0.88)],
+                        colors: [wallColor, wallColor],
                         startPoint: .top, endPoint: .bottom
                     )
                 )
@@ -375,7 +377,7 @@ struct IsoBuildingView: View {
         FrontRoofShape()
             .fill(
                 LinearGradient(
-                    colors: [roofColor, roofColor.opacity(0.85)],
+                    colors: [roofColor, roofColor],
                     startPoint: .top, endPoint: .bottom
                 )
             )
@@ -397,7 +399,7 @@ struct IsoBuildingView: View {
         )
         .fill(
             LinearGradient(
-                colors: [roofColorDark, roofColorDark.opacity(0.8)],
+                colors: [roofColorDark, roofColorDark],
                 startPoint: .topLeading, endPoint: .bottomTrailing
             )
         )
