@@ -11,7 +11,6 @@ struct WorldMapView: View {
     @State private var cloudOffset1: CGFloat = -200
     @State private var cloudOffset2: CGFloat = 400
 
-    // Сортировка по глубине: верхние (дальние) рисуются раньше, нижние (ближние) — поверх
     private var sortedLocations: [LocationID] {
         LocationID.allCases.sorted { $0.mapPosition.y < $1.mapPosition.y }
     }
@@ -23,7 +22,6 @@ struct WorldMapView: View {
                 let H = geo.size.height
 
                 ZStack {
-                    // Небо
                     LinearGradient(
                         colors: [
                             Color(hex: "#AEE2FF"),
@@ -35,13 +33,9 @@ struct WorldMapView: View {
                     )
                     .ignoresSafeArea()
 
-                    // Солнце
                     sunView(W: W, H: H)
-
-                    // Облака
                     cloudsLayer(W: W, H: H)
 
-                    // Земля — изометрическая трапеция
                     IsoGroundShape()
                         .fill(
                             LinearGradient(
@@ -57,19 +51,15 @@ struct WorldMapView: View {
                         .frame(width: W, height: H)
                         .ignoresSafeArea()
 
-                    // Горизонтальные линии-плитки, уходящие в перспективу
                     groundTileLines(W: W, H: H)
 
-                    // Дорожка в перспективе
                     IsoRoadShape()
                         .fill(Color(hex: "#E8C99B"))
                         .frame(width: W, height: H)
                         .opacity(0.9)
 
-                    // Декор — 3D деревья и кусты
                     decorLayer(W: W, H: H)
 
-                    // Заголовок
                     VStack {
                         Text("OurWorld")
                             .font(.system(size: 32, weight: .heavy, design: .rounded))
@@ -80,7 +70,6 @@ struct WorldMapView: View {
                     }
                     .allowsHitTesting(false)
 
-                    // Здания и парк (в порядке глубины)
                     ForEach(Array(sortedLocations.enumerated()), id: \.element.id) { index, location in
                         NavigationLink(value: location) {
                             Group {
@@ -105,7 +94,6 @@ struct WorldMapView: View {
                         )
                     }
 
-                    // Кнопка меню
                     menuButton
                 }
             }
@@ -176,7 +164,7 @@ struct WorldMapView: View {
         .shadow(color: .black.opacity(0.06), radius: 6, y: 3)
     }
 
-    // MARK: - Линии-плитки на земле
+    // MARK: - Линии-плитки
 
     private func groundTileLines(W: CGFloat, H: CGFloat) -> some View {
         ZStack {
@@ -278,25 +266,21 @@ struct IsoRoadShape: Shape {
 struct IsoBuildingView: View {
     let location: LocationID
 
-    // Размеры
     private let wallW: CGFloat = 90
     private let wallH: CGFloat = 70
     private let roofH: CGFloat = 50
-    private let sideDx: CGFloat = 22   // глубина вправо
-    private let sideDy: CGFloat = 13   // глубина вверх
+    private let sideDx: CGFloat = 22
+    private let sideDy: CGFloat = 13
 
-    // Общая рамка
     private let frameW: CGFloat = 140
     private let frameH: CGFloat = 160
     private let originX: CGFloat = 60
     private let originY: CGFloat = 145
 
     private var wallColor: Color { Color(hex: location.wallColor) }
-    // НЕ прозрачный, а затемнённый — иначе сквозь стену видно фон
-    private var wallColorDark: Color { Color(hex: location.wallColor).brightness(-0.18) }
+    private var wallColorDark: Color { Color(hex: location.wallColor).darkened(by: 0.25) }
     private var roofColor: Color { Color(hex: location.roofColor) }
-    // НЕ прозрачный, а затемнённый
-    private var roofColorDark: Color { Color(hex: location.roofColor).brightness(-0.22) }
+    private var roofColorDark: Color { Color(hex: location.roofColor).darkened(by: 0.30) }
 
     private func fx(_ lx: CGFloat) -> CGFloat { lx + originX }
     private func fy(_ ly: CGFloat) -> CGFloat { ly + originY }
@@ -318,7 +302,6 @@ struct IsoBuildingView: View {
         .frame(width: frameW, height: frameH)
     }
 
-    // Тень на земле
     private var groundShadow: some View {
         Ellipse()
             .fill(Color.black.opacity(0.22))
@@ -327,15 +310,9 @@ struct IsoBuildingView: View {
             .position(x: fx(6), y: fy(4))
     }
 
-    // Правая боковая стена
     private var rightSideWall: some View {
         RightWallShape(depthX: sideDx, depthY: sideDy, wallH: wallH)
-            .fill(
-                LinearGradient(
-                    colors: [wallColorDark, wallColorDark],
-                    startPoint: .top, endPoint: .bottom
-                )
-            )
+            .fill(wallColorDark)
             .overlay(
                 RightWallShape(depthX: sideDx, depthY: sideDy, wallH: wallH)
                     .stroke(Color.black.opacity(0.45), lineWidth: 1.5)
@@ -345,16 +322,10 @@ struct IsoBuildingView: View {
                       y: fy(-wallH / 2 - sideDy / 2))
     }
 
-    // Передняя стена
     private var frontWall: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 3)
-                .fill(
-                    LinearGradient(
-                        colors: [wallColor, wallColor],
-                        startPoint: .top, endPoint: .bottom
-                    )
-                )
+                .fill(wallColor)
                 .frame(width: wallW, height: wallH)
 
             HStack(spacing: 6) {
@@ -372,15 +343,9 @@ struct IsoBuildingView: View {
         .position(x: fx(0), y: fy(-wallH / 2))
     }
 
-    // Передняя крыша (треугольник)
     private var frontRoof: some View {
         FrontRoofShape()
-            .fill(
-                LinearGradient(
-                    colors: [roofColor, roofColor],
-                    startPoint: .top, endPoint: .bottom
-                )
-            )
+            .fill(roofColor)
             .overlay(
                 FrontRoofShape()
                     .stroke(Color.black.opacity(0.4), lineWidth: 1.8)
@@ -389,7 +354,6 @@ struct IsoBuildingView: View {
             .position(x: fx(0), y: fy(-wallH - roofH / 2))
     }
 
-    // Правый скат крыши
     private var rightRoof: some View {
         RightRoofShape(
             ridgeDx: sideDx,
@@ -397,12 +361,7 @@ struct IsoBuildingView: View {
             roofH: roofH,
             wallHalfW: wallW / 2
         )
-        .fill(
-            LinearGradient(
-                colors: [roofColorDark, roofColorDark],
-                startPoint: .topLeading, endPoint: .bottomTrailing
-            )
-        )
+        .fill(roofColorDark)
         .overlay(
             RightRoofShape(
                 ridgeDx: sideDx,
@@ -419,7 +378,6 @@ struct IsoBuildingView: View {
         )
     }
 
-    // Дымоход
     private var chimney: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 1.5)
@@ -438,7 +396,6 @@ struct IsoBuildingView: View {
         .position(x: fx(wallW * 0.28), y: fy(-wallH - roofH * 0.7))
     }
 
-    // Дверь
     private var doorElement: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 6)
@@ -468,7 +425,6 @@ struct IsoBuildingView: View {
         .position(x: fx(0), y: fy(-18))
     }
 
-    // Окна
     private var leftWindowElement: some View {
         windowShape.position(x: fx(-wallW * 0.28), y: fy(-wallH * 0.65))
     }
@@ -497,7 +453,6 @@ struct IsoBuildingView: View {
         }
     }
 
-    // Табличка с иконкой
     private var locationSignElement: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 4)
@@ -516,7 +471,6 @@ struct IsoBuildingView: View {
         .position(x: fx(0), y: fy(-wallH + 12))
     }
 
-    // Цветочный горшок
     private var flowerPotElement: some View {
         ZStack(alignment: .bottom) {
             RoundedRectangle(cornerRadius: 2)
@@ -557,7 +511,6 @@ struct IsoParkView: View {
         .frame(width: frameW, height: frameH)
     }
 
-    // Земляная площадка (трапеция как у iso-мира)
     private var groundPad: some View {
         ZStack {
             ParkGroundShape()
@@ -585,7 +538,6 @@ struct IsoParkView: View {
         }
     }
 
-    // Перекрещивающиеся дорожки из песка
     private var pathCross: some View {
         ZStack {
             Rectangle()
@@ -602,7 +554,6 @@ struct IsoParkView: View {
         }
     }
 
-    // Скамейка
     private var bench: some View {
         ZStack {
             HStack(spacing: 22) {
@@ -642,19 +593,16 @@ struct IsoParkView: View {
         .position(x: frameW * 0.5, y: frameH * 0.72)
     }
 
-    // Большое дерево (главный акцент парка)
     private var treeBig: some View {
         IsoTree(size: 70)
             .position(x: frameW * 0.27, y: frameH * 0.42)
     }
 
-    // Дерево поменьше
     private var treeSmall: some View {
         IsoTree(size: 48)
             .position(x: frameW * 0.76, y: frameH * 0.48)
     }
 
-    // Кусты
     private var bushLeft: some View {
         IsoBush(size: 28)
             .position(x: frameW * 0.12, y: frameH * 0.72)
@@ -664,7 +612,6 @@ struct IsoParkView: View {
             .position(x: frameW * 0.88, y: frameH * 0.7)
     }
 
-    // Клумбы с цветами
     private var flowers: some View {
         ZStack {
             flowerDots(count: 5, x: frameW * 0.55, y: frameH * 0.82,
@@ -811,6 +758,42 @@ struct RightRoofShape: Shape {
         p.addLine(to: CGPoint(x: ridgeDx, y: 0))
         p.closeSubpath()
         return p
+    }
+}
+
+// MARK: - Затемнение / осветление цвета
+
+extension Color {
+    /// Затемнить: fraction 0.0 = не менять, 1.0 = полностью чёрный
+    func darkened(by fraction: Double) -> Color {
+        let f = max(0, min(1, fraction))
+        let ui = UIColor(self)
+        return Color(ui.blended(with: .black, fraction: CGFloat(f)) ?? ui)
+    }
+
+    /// Осветлить: fraction 0.0 = не менять, 1.0 = полностью белый
+    func lightened(by fraction: Double) -> Color {
+        let f = max(0, min(1, fraction))
+        let ui = UIColor(self)
+        return Color(ui.blended(with: .white, fraction: CGFloat(f)) ?? ui)
+    }
+}
+
+private extension UIColor {
+    func blended(with other: UIColor, fraction: CGFloat) -> UIColor? {
+        var r1: CGFloat = 0, g1: CGFloat = 0, b1: CGFloat = 0, a1: CGFloat = 0
+        var r2: CGFloat = 0, g2: CGFloat = 0, b2: CGFloat = 0, a2: CGFloat = 0
+        guard getRed(&r1, green: &g1, blue: &b1, alpha: &a1),
+              other.getRed(&r2, green: &g2, blue: &b2, alpha: &a2) else {
+            return nil
+        }
+        let f = max(0, min(1, fraction))
+        return UIColor(
+            red: r1 + (r2 - r1) * f,
+            green: g1 + (g2 - g1) * f,
+            blue: b1 + (b2 - b1) * f,
+            alpha: a1 + (a2 - a1) * f
+        )
     }
 }
 
